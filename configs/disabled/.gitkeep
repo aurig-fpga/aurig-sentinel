@@ -1,0 +1,2 @@
+# Configs in this directory are ignored by Sentinel discovery.
+# Move a config here to "park" it without deleting it.

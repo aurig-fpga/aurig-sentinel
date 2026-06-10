@@ -1,0 +1,306 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║           SENTINEL STARTUP AUTOMATION - INSTALLATION SUMMARY               ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📦 FILES CREATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LINUX (systemd):
+  deployment/systemd/
+    ├─ sentinel.service       (938 bytes)  - Service unit for continuous running
+    ├─ sentinel.timer         (463 bytes)  - Timer unit for scheduled execution
+    └─ install.sh             (5.8 KB)     - Automated installation script ✅ executable
+
+WINDOWS (Task Scheduler):
+  deployment/windows/
+    ├─ sentinel-task.xml      (2.2 KB)     - Task definition (XML format)
+    ├─ install.bat            (6.1 KB)     - Batch script installer
+    └─ install.ps1            (8.2 KB)     - PowerShell installer (recommended)
+
+DOCUMENTATION:
+  deployment/README.md        (Full documentation with examples)
+
+
+🐧 LINUX QUICK START
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Install with automated script:
+   
+   cd deployment/systemd
+   ./install.sh
+   
+   The script will:
+   ✓ Detect your Python and Sentinel paths
+   ✓ Ask: Service, Timer, or Both?
+   ✓ Configure systemd units
+   ✓ Install to /etc/systemd/system/
+   ✓ Optionally enable and start
+
+2. Choose installation type:
+
+   Option 1 - SERVICE (Continuous running):
+     • Always active, monitors/processes continuously
+     • Auto-restarts on failure
+     • Good for: Event-driven workflows, real-time processing
+
+   Option 2 - TIMER (Scheduled execution):
+     • Runs daily at 2:00 AM
+     • Also runs 5 min after boot
+     • Good for: Night builds, batch processing, resource savings
+
+   Option 3 - BOTH:
+     • Maximum flexibility
+     • Can enable/disable independently
+
+3. Manage the service:
+
+   sudo systemctl status sentinel.service    # Check status
+   sudo systemctl start sentinel.service     # Start now
+   sudo systemctl stop sentinel.service      # Stop
+   sudo systemctl restart sentinel.service   # Restart
+   
+   sudo journalctl -u sentinel.service -f    # View logs (live)
+   sudo journalctl -u sentinel.timer         # View timer logs
+
+4. Manage the timer:
+
+   systemctl list-timers                     # List all timers
+   sudo systemctl status sentinel.timer      # Timer status
+   sudo systemctl start sentinel.timer       # Start timer
+
+
+🪟 WINDOWS QUICK START
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+METHOD 1 - PowerShell (Recommended):
+
+   1. Open PowerShell as Administrator
+   2. Navigate: cd deployment\windows
+   3. Run: .\install.ps1
+   4. Follow prompts
+
+   Features:
+   ✓ Auto-detects Python installation
+   ✓ Validates paths
+   ✓ Offers schedule customization
+   ✓ Better error handling
+   ✓ Color-coded output
+
+METHOD 2 - Batch Script:
+
+   1. Open Command Prompt as Administrator
+   2. Navigate: cd deployment\windows
+   3. Run: install.bat
+   4. Follow prompts
+
+METHOD 3 - Manual (Task Scheduler GUI):
+
+   1. Open Task Scheduler (taskschd.msc)
+   2. Create folder: Sentinel
+   3. Import sentinel-task.xml
+   4. Edit paths:
+      • Python: C:\Python310\python.exe → your path
+      • Sentinel: C:\Sentinel → your installation
+      • Config: C:\Sentinel\config\sentinel_local.json → your config
+   5. Set user account in General tab
+   6. Test with "Run"
+
+Manage tasks:
+
+   # PowerShell
+   Get-ScheduledTask -TaskPath "\Sentinel\"
+   Start-ScheduledTask -TaskName "FPGA Build Pipeline" -TaskPath "\Sentinel\"
+   
+   # Command Prompt
+   schtasks /query /tn "Sentinel\FPGA Build Pipeline"
+   schtasks /run /tn "Sentinel\FPGA Build Pipeline"
+
+View logs:
+   • Task Scheduler GUI: taskschd.msc → Sentinel → History
+   • Event Viewer: eventvwr.msc → Task Scheduler logs
+   • Sentinel logs: projects\<name>\runs\<timestamp>\logs\
+
+
+📅 DEFAULT SCHEDULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Both platforms:
+  ✓ Daily at 2:00 AM
+  ✓ On system boot (delayed 5 minutes)
+  ✓ Manual execution available anytime
+
+Customization:
+  • Linux: Edit sentinel.timer OnCalendar= directive
+  • Windows: Edit task triggers in GUI or XML
+
+
+🔧 WHAT GETS AUTOMATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When Sentinel runs automatically, it executes:
+
+  1. Fetch Code       - Clone/update VHDL repositories
+  2. Linting          - Style and syntax checking
+  3. Documentation    - Generate HTML/PDF docs
+  4. Synthesis        - FPGA synthesis (Vivado/Quartus)
+  5. Regression Tests - Run testbenches
+  6. Deployment       - Optional FPGA programming
+
+All based on your config: config/sentinel_local.json
+
+Results stored in timestamped directories:
+  projects/<project_name>/runs/YYYY-MM-DD_HHMM/
+
+
+🎯 USE CASES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Scenario 1: NIGHTLY BUILDS
+  Setup: Timer/Scheduled Task at 2 AM
+  Benefit: Fresh builds every morning, no manual work
+
+Scenario 2: CONTINUOUS INTEGRATION
+  Setup: Service on Linux (continuous)
+  Benefit: Immediate feedback on code changes
+
+Scenario 3: WEEKEND PROCESSING
+  Setup: Weekly timer/task (Saturday/Sunday)
+  Benefit: Heavy synthesis jobs when workstation idle
+
+Scenario 4: ON-DEMAND ONLY
+  Setup: Install but don't enable auto-start
+  Benefit: Manual control, run when ready
+
+
+⚙️ CONFIGURATION TIPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LINUX (sentinel.service):
+  • User: Change User=it_admin to your username
+  • Paths: Update WorkingDirectory and ExecStart
+  • Resources: Adjust MemoryLimit, CPUQuota as needed
+  • Security: Review ProtectSystem, NoNewPrivileges options
+
+LINUX (sentinel.timer):
+  • Schedule: Change OnCalendar=*-*-* 02:00:00
+  • Examples:
+      Daily 10 PM:        OnCalendar=*-*-* 22:00:00
+      Mon-Fri 9 AM:       OnCalendar=Mon..Fri *-*-* 09:00:00
+      Every 6 hours:      OnCalendar=*-*-* 00/6:00:00
+
+WINDOWS (sentinel-task.xml):
+  • Python: Update <Command> path
+  • Config: Update <Arguments> path
+  • User: Set in GUI or update <UserId> in XML
+  • Timeout: Default 3 hours, change <ExecutionTimeLimit>
+
+
+🛠️ TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LINUX - Service won't start:
+  sudo systemctl status sentinel.service
+  sudo journalctl -u sentinel.service -n 50
+  
+  Common issues:
+  • Wrong paths in service file
+  • Python venv not found
+  • Config file missing
+  • Permission denied
+
+LINUX - Timer not triggering:
+  systemctl list-timers --all
+  sudo journalctl -u sentinel.timer
+  
+  Check:
+  • Timer is enabled: systemctl is-enabled sentinel.timer
+  • Calendar format correct in timer file
+  • System time is correct
+
+WINDOWS - Task fails:
+  1. Check Last Run Result in Task Scheduler
+  2. Event Viewer → TaskScheduler logs
+  3. Verify Python path exists
+  4. Test command manually in PowerShell:
+     cd C:\Sentinel
+     C:\Python310\python.exe -m sentinel.main -config config\sentinel_local.json
+  
+WINDOWS - Task doesn't run on schedule:
+  • Task is enabled?
+  • Triggers configured correctly?
+  • System awake at trigger time?
+  • Check "Conditions" tab in task properties
+
+
+📊 MONITORING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LINUX:
+  # Live logs
+  sudo journalctl -u sentinel.service -f
+  
+  # Errors in last 24 hours
+  sudo journalctl -u sentinel.service --since "24 hours ago" | grep ERROR
+  
+  # Resource usage
+  systemctl status sentinel.service
+
+WINDOWS:
+  # Task history
+  Get-ScheduledTaskInfo -TaskName "FPGA Build Pipeline" -TaskPath "\Sentinel\"
+  
+  # Live Sentinel logs
+  Get-Content "C:\Sentinel\projects\<project>\runs\<latest>\logs\sentinel.log" -Wait
+  
+  # Event Viewer
+  eventvwr.msc → Task Scheduler logs
+
+
+🗑️ UNINSTALLATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LINUX:
+  sudo systemctl stop sentinel.service sentinel.timer
+  sudo systemctl disable sentinel.service sentinel.timer
+  sudo rm /etc/systemd/system/sentinel.service
+  sudo rm /etc/systemd/system/sentinel.timer
+  sudo systemctl daemon-reload
+
+WINDOWS:
+  # PowerShell
+  Unregister-ScheduledTask -TaskName "FPGA Build Pipeline" -TaskPath "\Sentinel\" -Confirm:$false
+  
+  # Command Prompt
+  schtasks /delete /tn "Sentinel\FPGA Build Pipeline" /f
+
+
+✅ BEST PRACTICES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. TEST FIRST: Run Sentinel manually before automating
+   python -m sentinel.main -config config/sentinel_local.json
+
+2. START SMALL: Begin with timer/schedule, not continuous service
+
+3. MONITOR LOGS: Watch first few automated runs
+
+4. SET TIMEOUTS: Synthesis can take hours, plan accordingly
+
+5. RESOURCE LIMITS: Don't let Sentinel monopolize system resources
+
+6. BACKUP CONFIG: Version control your config files
+
+7. DOCUMENT CHANGES: Note customizations in deployment/README.md
+
+8. SECURITY: Don't run as root/admin unless necessary
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                         ✅ STARTUP AUTOMATION READY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sentinel can now run automatically on both Linux and Windows!
+
+Choose your platform, run the installer, and enjoy automated FPGA builds.
+
+For detailed documentation, see: deployment/README.md

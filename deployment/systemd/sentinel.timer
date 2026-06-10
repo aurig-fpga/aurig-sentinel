@@ -1,0 +1,23 @@
+[Unit]
+Description=Sentinel FPGA Build Pipeline Timer
+Documentation=https://github.com/aurig-fpga/aurig-sentinel
+
+[Timer]
+# Run daily at 2:00 AM
+OnCalendar=daily
+OnCalendar=*-*-* 02:00:00
+
+# Run 5 minutes after boot (useful for development)
+OnBootSec=5min
+
+# Randomize start time by up to 10 minutes to avoid system load spikes
+RandomizedDelaySec=10min
+
+# Persist timer across reboots
+Persistent=true
+
+# Ensure accuracy
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

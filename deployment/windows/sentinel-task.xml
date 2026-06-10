@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Date>2025-11-27T00:00:00</Date>
+    <Author>Sentinel</Author>
+    <Description>Automated FPGA build pipeline that runs daily to fetch code, lint, synthesize, and deploy VHDL projects.</Description>
+    <URI>\Sentinel\FPGA Build Pipeline</URI>
+  </RegistrationInfo>
+  
+  <Triggers>
+    <!-- Daily at 2:00 AM -->
+    <CalendarTrigger>
+      <StartBoundary>2025-11-27T02:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay>
+        <DaysInterval>1</DaysInterval>
+      </ScheduleByDay>
+    </CalendarTrigger>
+    
+    <!-- On system startup (delayed 5 minutes) -->
+    <BootTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT5M</Delay>
+    </BootTrigger>
+  </Triggers>
+  
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId> <!-- SYSTEM account, change to your user SID -->
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <DisallowStartOnRemoteAppSession>false</DisallowStartOnRemoteAppSession>
+    <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT3H</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\Python310\python.exe</Command>
+      <Arguments>-m sentinel.main -config "C:\Sentinel\config\sentinel_local.json"</Arguments>
+      <WorkingDirectory>C:\Sentinel</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>

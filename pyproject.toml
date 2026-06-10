@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 LogiMentor S.r.l.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aurig-sentinel"
+version = "0.1.0"
+description = "Automated FPGA/VHDL build pipeline with regression testing and synthesis"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Andrea Campera", email = "a.campera@logimentor.com" }]
+dependencies = ["GitPython>=3.1.40", "PyYAML>=6.0"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[project.optional-dependencies]
+regression = ["vunit-hdl>=4.0"]
+test = ["pytest>=7"]
+
+[project.scripts]
+sentinel = "sentinel.main:main"
+
+[project.urls]
+Homepage = "https://github.com/aurig-fpga/aurig-sentinel"
+Repository = "https://github.com/aurig-fpga/aurig-sentinel"
+Issues = "https://github.com/aurig-fpga/aurig-sentinel/issues"
+Changelog = "https://github.com/aurig-fpga/aurig-sentinel/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sentinel"]

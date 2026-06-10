@@ -1,0 +1,108 @@
+# Sentinel configuration template — schema v1.0
+#
+# Copy this file alongside it (e.g. cp example.yaml my_project.yaml) and
+# tweak the values for your project. Sentinel will pick up every *.yaml
+# at the top of this directory; files under disabled/ are ignored.
+
+schema_version: "1.0"            # required; only "1.0" is supported
+
+project:
+  name: example                  # required; used as the run-output subdirectory
+  description: >-                # optional; free-form, surfaces in logs
+    Reference Sentinel pipeline. Replace with your project description.
+
+global_settings:                 # optional; the whole block can be omitted
+
+  # Restrict execution to a daily window. Useful for nightly CI on shared
+  # FPGA workstations. Cross-midnight windows (e.g. 22:00-06:00) are OK.
+  # night_time_window:
+  #   start: "22:00"
+  #   end:   "06:00"
+
+  # Automatic pruning of old runs under <output.base_dir>/<project.name>/.
+  # Mark a run dir as ".release" or ".keep" to exempt it.
+  cleanup:
+    enabled: false
+    retention_days: 30
+
+  # When true, a phase failure is logged but the next phase still runs.
+  # When false, the first failure stops the pipeline for this project.
+  continue_on_error: true
+
+  # Verbosity for both console and log file: quiet | normal | verbose.
+  log_level: normal
+
+# Code source. Required.
+fetch:
+  type: git                      # git | local
+  # ---- git type ----
+  url: https://github.com/owner/repo.git
+  branch: main
+  shallow_clone: true            # default true
+  depth: 1                       # only honoured when shallow_clone is true
+  # ssh_key_path: ~/.ssh/id_ed25519_sentinel   # optional, for private repos
+  # ---- local type ----
+  # type: local
+  # local_path: /absolute/path/to/your/checkout
+
+# Path (relative to the fetched repo) to the repository's manifest. The
+# manifest format is project-specific; Sentinel just resolves the path
+# and hands it to phases that need it.
+project_manifest: manifest/sentinel.yaml
+
+# Optional pre-run hooks executed before the phase pipeline. Use this to
+# load vendor environment files, run register-map generators, etc. The
+# scripts list runs first (in order), then the program with its args.
+# When `enabled: true` you must provide at least one of `scripts`
+# (non-empty) or `program` — an empty enabled block is rejected.
+pre_run:
+  enabled: false
+  scripts: []                    # e.g. [scripts/load_env.sh, scripts/gen_regs.py]
+  # program: vivado
+  # args: ["-mode", "batch", "-source", "scripts/create_project.tcl"]
+  # timeout_seconds: 1800        # default; raise for long env scripts
+
+# Phase pipeline. At least one phase must be enabled.
+# `linting`, `regression`, and `synthesis` have backends; `documentation`
+# is accepted but emits a TODO(aurig-core) placeholder until that backend
+# stabilises. `deployment` is roadmap.
+phases:
+  linting:
+    enabled: false
+    # tcl4fpga_path is the path to a aurig-core checkout (repository root).
+    # If absent, Sentinel falls back to env SENTINEL_TCL4FPGA_PATH.
+    # tcl4fpga_path: /opt/aurig-core
+    # tclsh_path: tclsh                            # default; override if not on PATH
+    # fail_on: error                                # error | warning | note | any | none
+    # format:  html                                 # html | md | csv | text
+    # output_dir: lint_output                       # under <run_dir>/
+    # policy: lint/lint_user.json                   # optional, relative or absolute
+    # include: '.*\.vhd$'                           # optional regex filter
+    # exclude: '.*generated.*'                      # optional regex filter
+  documentation:
+    enabled: false
+  regression:
+    enabled: false
+    # backend:        convention            # vunit | convention
+    # simulator:      ghdl                  # ghdl | modelsim | questasim | active-hdl | vivado
+    # testbench_dir:  sim                   # relative to the fetched repo
+    # vunit_run_script: sim/run_vunit.py    # required when backend is vunit
+  synthesis:
+    enabled: true
+    synthesis_tool: vivado                  # vivado | quartus (quartus stub for now)
+    synthesis_tool_path: /tools/Xilinx/Vivado/2024.1
+    synthesis_script: vivado                # executable that runs the TCL script
+    repo_synthesis_script: scripts/run_synthesis.tcl   # path inside the fetched repo
+    output_dir: synthesis_output
+    options:
+      expected_reports:
+        - utilization.rpt
+        - timing_summary.rpt
+        - drc.rpt
+  deployment:
+    enabled: false                # roadmap — schema accepts it, no backend yet
+
+# Where artifacts land. Optional.
+output:
+  base_dir: ./runs                # one timestamped subdir per project run
+  bundle_zip: true                # zip the artifacts/ folder at the end

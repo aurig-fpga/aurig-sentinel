@@ -1,0 +1,45 @@
+# Pre-commit hooks for aurig-sentinel
+# Run on every commit (locally + CI).
+# Install locally: pip install pre-commit && pre-commit install && pre-commit install --hook-type commit-msg
+
+repos:
+  # Standard hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Secrets scanner
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+
+  # Custom local hooks
+  # NOTE: language: system + `bash <relative-path>` (not language: script):
+  # on Windows, language: script passes the hook a mangled absolute path
+  # (backslashes stripped) and fails with exit 127. Invoking bash with the
+  # repo-relative path works on both git-bash (Windows) and Linux CI.
+  - repo: local
+    hooks:
+      - id: no-ai-coauthor
+        name: Block AI co-author trailers in commit messages
+        entry: bash scripts/check-no-ai-coauthor.sh
+        language: system
+        stages: [commit-msg]
+
+      - id: no-staging-files
+        name: Block staging-only files from being committed
+        entry: bash scripts/check-no-staging-files.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

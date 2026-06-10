@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+*.pyc
+*.pyo
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Project-specific
+projects/
+logs/
+temp/
+git_fetch_repo/
+local_repo/
+*.log
+*.bak
+
+# Sentinel runtime output (output.base_dir default = ./runs/).
+# Each run lands under runs/<project>/<timestamp>/; never committed.
+runs/
+
+# Claude Code local state (auto-memory, project-level settings).
+# Lives outside the repo content domain; user-machine-local.
+.claude/
+
+# Project-specific Sentinel configs are workstation-local, never
+# committed to the Sentinel repo (they would couple Sentinel to a
+# single customer's repo structure and leak internal naming).
+# Only configs/example.yaml is tracked (the canonical schema
+# template). Real-project configs live on the workstation under
+# $SENTINEL_CONFIGS_DIR or ~/.sentinel/configs/. If you genuinely
+# add a new GENERIC template here, remove the file from this
+# allowlist explicitly.
+configs/*.yaml
+!configs/example.yaml
+
+# OS
+.DS_Store
+Thumbs.db
+
+*.log
+full_test_log.txt
+*.old

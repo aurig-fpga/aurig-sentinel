@@ -1,0 +1,136 @@
+################################################################################
+# Sentinel FPGA Build Pipeline - systemd Service Unit
+#
+# Purpose:
+#   Runs Sentinel FPGA build pipeline as a production system service
+#   with comprehensive security hardening following systemd best practices.
+#
+# Installation:
+#   sudo cp sentinel.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable sentinel.service
+#   sudo systemctl start sentinel.service
+#
+# Execution Modes:
+#   - Use this service for: One-time runs, on-boot execution, manual triggers
+#   - Use sentinel.timer for: Scheduled periodic runs (daily, weekly, etc.)
+#
+# Security Features:
+#   - Runs as dedicated 'sentinel' system user (no login, no privileges)
+#   - Application code immutable (root-owned /opt/sentinel)
+#   - Limited filesystem write access (only /var/lib and /var/log)
+#   - No privilege escalation (NoNewPrivileges)
+#   - Resource limits (2GB RAM, 80% CPU)
+#   - Network restricted to standard protocols only
+#   - System directories protected (ProtectSystem=strict)
+#
+# Author: Sentinel Development Team
+# Date: November 2025
+################################################################################
+
+[Unit]
+Description=Sentinel FPGA Build Pipeline Service
+Documentation=https://github.com/aurig-fpga/aurig-sentinel
+# Start after network is available (needed for git operations)
+After=network.target
+
+[Service]
+################################################################################
+# Execution Configuration
+################################################################################
+
+# Process runs in foreground (logs to stdout/stderr)
+Type=simple
+
+# Run as dedicated system user (security: not root, no login capability)
+User=sentinel
+Group=sentinel
+
+# Working directory (where Sentinel executes from)
+WorkingDirectory=/opt/sentinel
+
+# Environment variables
+Environment="PATH=/opt/sentinel/venv/bin:/usr/local/bin:/usr/bin:/bin"
+# Force Python to use unbuffered output for real-time logging
+Environment="PYTHONUNBUFFERED=1"
+# Configuration file location
+Environment="SENTINEL_CONFIG=/etc/sentinel/config.json"
+# Home directory for sentinel user (required for SSH/Git operations)
+# Sentinel user has no home by default (/bin/false shell, --no-create-home)
+# Set HOME to /var/lib/sentinel so SSH can find .ssh/config and keys
+Environment="HOME=/var/lib/sentinel"
+
+# Main execution command - runs Sentinel using venv Python with specified config file
+ExecStart=/opt/sentinel/venv/bin/python -m sentinel.main -config /etc/sentinel/config.json
+
+################################################################################
+# Restart and Reliability
+################################################################################
+
+# Restart policy: Only restart if process exits with error code
+Restart=on-failure
+# Wait 30 seconds before restarting
+RestartSec=30s
+# Maximum 3 restart attempts
+StartLimitBurst=3
+# Within 5 minutes (prevents infinite restart loops)
+StartLimitIntervalSec=300
+
+################################################################################
+# Resource Limits (Prevents Resource Exhaustion Attacks)
+################################################################################
+
+# Maximum 2GB RAM (prevents memory bombs)
+MemoryLimit=2G
+# Maximum 80% CPU (prevents CPU hogging)
+CPUQuota=80%
+
+################################################################################
+# Security Hardening (Defense in Depth)
+################################################################################
+
+# Privilege Escalation Protection
+# Cannot gain new privileges via setuid, sudo, or capabilities
+NoNewPrivileges=true
+
+# Filesystem Protection
+# Isolated /tmp directory (cannot see other processes' tmp files)
+PrivateTmp=true
+# System directories are read-only
+ProtectSystem=strict
+# Cannot access /home directories
+ProtectHome=read-only
+# ONLY these paths are writable
+ReadWritePaths=/var/lib/sentinel /var/log/sentinel
+
+# Device Protection
+# Cannot access /dev/* hardware devices (prevents hardware tampering)
+PrivateDevices=true
+
+# Kernel Protection
+# Cannot modify /proc/sys/* kernel parameters
+ProtectKernelTunables=true
+# Cannot modify cgroup settings
+ProtectControlGroups=true
+
+# Network Protection
+# Only Unix sockets, IPv4, IPv6 - blocks exotic protocols that could be used for exploits
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+################################################################################
+# Logging Configuration
+################################################################################
+
+# Send logs to systemd journal (view with: journalctl -u sentinel.service)
+StandardOutput=journal
+StandardError=journal
+# Tag for easy filtering
+SyslogIdentifier=sentinel
+
+################################################################################
+# Installation Configuration
+################################################################################
+
+[Install]
+# Start automatically at boot (multi-user runlevel)
+WantedBy=multi-user.target

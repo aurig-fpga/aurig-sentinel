@@ -1,0 +1,192 @@
+═══════════════════════════════════════════════════════════════════
+  SENTINEL SYSTEM USER - QUICK REFERENCE
+═══════════════════════════════════════════════════════════════════
+
+✅ YES - DEDICATED SYSTEM USER IS HIGHLY RECOMMENDED FOR PRODUCTION
+
+═══════════════════════════════════════════════════════════════════
+  WHY IT'S IMPORTANT
+═══════════════════════════════════════════════════════════════════
+
+SECURITY:
+  • Privilege isolation - attackers limited to sentinel user
+  • No login access - cannot SSH/console as sentinel
+  • No sudo - cannot escalate privileges
+  • Immutable code - sentinel cannot modify /opt/sentinel
+  • Limited write access - only /var/lib/sentinel and /var/log/sentinel
+
+OPERATIONS:
+  • Clear ownership - ps aux | grep sentinel shows all processes
+  • Professional standard - like www-data, mysql, postgres
+  • Independent lifecycle - survives user logouts
+  • Easy auditing - all actions traceable to sentinel user
+
+═══════════════════════════════════════════════════════════════════
+  HOW IT WORKS
+═══════════════════════════════════════════════════════════════════
+
+USER CREATION:
+  useradd --system --no-create-home --shell /bin/false sentinel
+  
+  --system        → UID < 1000 (not a login user)
+  --no-create-home → No /home/sentinel directory
+  --shell /bin/false → Cannot login interactively
+  No password     → Cannot authenticate
+
+PERMISSIONS:
+  /opt/sentinel/          root:root       (application - read-only)
+  /etc/sentinel/          root:root       (config - read-only)
+  /var/lib/sentinel/      sentinel:sentinel (data - writable)
+  /var/log/sentinel/      sentinel:sentinel (logs - writable)
+
+SYSTEMD SECURITY:
+  User=sentinel                    # Run as non-root
+  NoNewPrivileges=true             # No privilege escalation
+  ProtectSystem=strict             # /usr, /boot read-only
+  ProtectHome=read-only            # /home inaccessible
+  ReadWritePaths=/var/lib/sentinel # Only these writable
+  MemoryLimit=2G                   # Prevent memory exhaustion
+  CPUQuota=80%                     # Prevent CPU hogging
+
+═══════════════════════════════════════════════════════════════════
+  VERIFICATION COMMANDS
+═══════════════════════════════════════════════════════════════════
+
+# Check user exists
+id sentinel
+# Expected: uid=997(sentinel) gid=997(sentinel)
+
+# Verify cannot login
+su - sentinel
+# Expected: "This account is currently not available" ✅
+
+# Check ownership
+ls -la /opt/sentinel | head -3
+# Expected: root root
+
+ls -la /var/lib/sentinel | head -3
+# Expected: sentinel sentinel
+
+# Test write restrictions
+sudo -u sentinel touch /opt/sentinel/test
+# Expected: Permission denied ✅
+
+sudo -u sentinel touch /var/lib/sentinel/test
+# Expected: SUCCESS ✅
+
+# Security score
+systemd-analyze security sentinel.service
+# Expected: Score < 5.0 (lower is better)
+
+═══════════════════════════════════════════════════════════════════
+  ATTACK PROTECTION
+═══════════════════════════════════════════════════════════════════
+
+SCENARIO                           WITHOUT USER     WITH USER
+───────────────────────────────────────────────────────────────────
+Code injection in VHDL             ❌ Full access   ✅ Isolated
+Command injection via Git          ❌ Home writable ✅ Protected
+Privilege escalation (setuid)     ❌ Possible      ✅ Blocked
+Memory exhaustion (DoS)            ❌ System crash  ✅ Killed
+Log flooding (disk full)           ❌ System crash  ✅ Rotated
+Malicious file modifications       ❌ Code writable ✅ Code immutable
+
+═══════════════════════════════════════════════════════════════════
+  FILES CREATED
+═══════════════════════════════════════════════════════════════════
+
+deployment/systemd/sentinel.service           # Enhanced security
+deployment/systemd/sentinel-logrotate.conf    # Log rotation (NEW)
+deployment/systemd/install-system.sh          # Updated installer
+deployment/SECURITY_BEST_PRACTICES.md         # Full guide (NEW)
+
+═══════════════════════════════════════════════════════════════════
+  BEST PRACTICES CHECKLIST
+═══════════════════════════════════════════════════════════════════
+
+✅ Dedicated system user (sentinel)
+✅ No login capability (shell=/bin/false)
+✅ No password authentication
+✅ Application in /opt (FHS compliant)
+✅ Config in /etc (protected)
+✅ Data in /var/lib (user-owned)
+✅ Logs in /var/log (user-owned, rotated)
+✅ systemd security hardening
+✅ Resource limits (Memory/CPU)
+✅ Logrotate configured (prevent disk fill)
+✅ Root owns code (immutable)
+✅ Minimal write permissions
+
+═══════════════════════════════════════════════════════════════════
+  INSTALLATION
+═══════════════════════════════════════════════════════════════════
+
+SYSTEM-WIDE (Production - Recommended):
+  cd /home/it_admin/Sentinel/deployment/systemd
+  sudo ./install-system.sh
+  
+  → Creates sentinel user automatically
+  → Installs to /opt/sentinel
+  → Applies all security hardening
+  → Installs logrotate config
+
+USER-LEVEL (Development):
+  cd /home/it_admin/Sentinel/deployment/systemd
+  ./install.sh
+  
+  → Runs as your user
+  → Installs to ~/Sentinel
+  → No system user needed
+
+═══════════════════════════════════════════════════════════════════
+  MONITORING
+═══════════════════════════════════════════════════════════════════
+
+# Service status
+systemctl status sentinel.service
+
+# Live logs
+journalctl -u sentinel.service -f
+
+# Resource usage
+systemctl show sentinel.service | grep -E 'Memory|CPU'
+
+# Processes
+ps aux | grep sentinel
+
+# Disk usage
+du -sh /var/lib/sentinel
+
+═══════════════════════════════════════════════════════════════════
+  SUMMARY
+═══════════════════════════════════════════════════════════════════
+
+Q: Should I use a dedicated system user?
+A: YES - Absolutely required for production. Industry standard.
+
+Q: What if I'm just testing?
+A: Use user-level install (install.sh). Upgrade to system-wide later.
+
+Q: Is it more secure?
+A: YES - Multiple layers: user isolation + systemd hardening + 
+   filesystem permissions + resource limits + audit trail
+
+Q: Can the sentinel user login?
+A: NO - Shell is /bin/false, no password, no SSH access
+
+Q: What can sentinel write to?
+A: ONLY /var/lib/sentinel (data) and /var/log/sentinel (logs)
+
+Q: Can sentinel modify its own code?
+A: NO - /opt/sentinel is owned by root (read-only)
+
+Q: What happens if compromised?
+A: Damage limited to data directory. Cannot modify code, config,
+   system files, or access other users' data.
+
+═══════════════════════════════════════════════════════════════════
+
+For complete documentation, see:
+  deployment/SECURITY_BEST_PRACTICES.md
+
+═══════════════════════════════════════════════════════════════════
