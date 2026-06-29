@@ -68,7 +68,7 @@ bash deployment/verify_user.sh
    # or
    sudo tail /var/log/sentinel/sentinel.log  # System-wide
    ```
-   
+
    You'll see:
    - `Running as user: it_admin` (user-level)
    - `Running as user: sentinel` (system-wide)

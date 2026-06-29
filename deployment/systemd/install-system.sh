@@ -235,11 +235,11 @@ echo
 if [ -f "$SENTINEL_SOURCE/config/sentinel_local.json" ]; then
     echo "[INFO] Copying configuration template..."
     cp "$SENTINEL_SOURCE/config/sentinel_local.json" "$CONFIG_DIR/config.json"
-    
+
     # Update paths in config to use /var/lib/sentinel
     echo "[INFO] Updating configuration paths..."
     sed -i 's|"workspace_path": ".*"|"workspace_path": "/var/lib/sentinel"|g' "$CONFIG_DIR/config.json" 2>/dev/null || true
-    
+
     echo "✅ Configuration copied to $CONFIG_DIR/config.json"
     echo "⚠️  IMPORTANT: Review and edit $CONFIG_DIR/config.json"
 else
