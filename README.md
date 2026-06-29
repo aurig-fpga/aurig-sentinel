@@ -167,10 +167,10 @@ manifest off to the right phase.
 
 The AURIG stack ships, **as a single offer**:
 
-- HDL **linting** as a Sentinel phase backed by aurig-core (active —
-  aurig-core's project lint runner driven as a subprocess).
+- HDL **linting** as a Sentinel phase backed by aurig-lint (active —
+  aurig-lint's project lint runner driven as a subprocess).
 - HDL **documentation** generation as a Sentinel phase backed by
-  aurig-core (in progress).
+  aurig-doc (planned — no backend integrated yet).
 - Vendor-agnostic **synthesis script generation** through the manifest,
   not duplicated per project.
 - **Regression**, **synthesis**, and **artifact bundling** in one
@@ -243,10 +243,12 @@ phases:
 
 - **Python 3.9+** with `pip` and `venv`.
 - **Git** on `PATH` (used by GitPython, with a subprocess fallback).
-- **aurig-core** — required by the `linting` phase (project lint
-  runner); will also back `documentation` when that backend lands. See
-  [aurig-core](https://github.com/aurig-fpga/aurig-core) (not yet
-  published — coming soon).
+- **aurig-lint** — required by the `linting` phase (the project lint
+  runner), which requires **aurig-core** on the Tcl package path. See
+  [aurig-lint](https://github.com/aurig-fpga/aurig-lint).
+- The `documentation` phase backend will be **aurig-doc** (planned —
+  not yet integrated). See
+  [aurig-doc](https://github.com/aurig-fpga/aurig-doc).
 - **EDA tools as needed**, available on `PATH` for the user that runs
   Sentinel:
   - **Synthesis:** Xilinx Vivado (Quartus is a stub).
@@ -327,8 +329,8 @@ without deleting its config, move it under `configs/disabled/`.
 |-----------------|----------------------------------------------|---------------------------------------------------|
 | `fetch`         | Git clone or local copy into the run dir     | Active                                            |
 | `pre_run`       | User-supplied scripts and a main program     | Active                                            |
-| `linting`       | VHDL style/quality checks via aurig-core     | Active (`aurig-core` project lint runner)         |
-| `documentation` | HDL documentation generation                 | Pending aurig-core integration                    |
+| `linting`       | VHDL style/quality checks via aurig-lint     | Active (`aurig-lint` project lint runner)         |
+| `documentation` | HDL documentation generation                 | Planned (aurig-doc integration)                   |
 | `regression`    | Simulation-based regression                  | Active (`vunit` + `convention` backends)          |
 | `synthesis`     | FPGA synthesis via repo-provided TCL         | Active (Vivado; Quartus stub)                     |
 | `deployment`    | Bitstream programming                        | Roadmap (schema accepts it, no backend)           |
@@ -591,7 +593,7 @@ and maps the runner's exit codes onto phase statuses (`0` →
 | Field            | Type            | Default        | Notes                                                                              |
 |------------------|-----------------|----------------|------------------------------------------------------------------------------------|
 | `enabled`        | bool            | `false`        |                                                                                    |
-| `tcl4fpga_path`  | string          | unset          | Required at runtime. Falls back to env `SENTINEL_TCL4FPGA_PATH` when absent.       |
+| `aurig_lint_path`  | string          | unset          | Required at runtime. Falls back to env `SENTINEL_AURIG_LINT_PATH` when absent.       |
 | `tclsh_path`     | string          | `tclsh`        | Resolved on `PATH` at runtime.                                                     |
 | `fail_on`        | enum            | `error`        | `error \| warning \| info \| any \| none`. Passed through as aurig-lint `-fail_on`. Default mirrors the aurig-lint single-file CLI. |
 | `format`         | enum            | `html`         | `html \| md \| csv \| text`. Passed through as `-format`.                          |
@@ -600,12 +602,13 @@ and maps the runner's exit codes onto phase statuses (`0` →
 | `include`        | string          | unset          | Regex passed through as `-include`.                                                |
 | `exclude`        | string          | unset          | Regex passed through as `-exclude` (OR'd with `lint.excludes` from the manifest).  |
 
-`tcl4fpga_path` must point at the root of an aurig-core checkout; the
+`aurig_lint_path` must point at the root of an aurig-lint checkout; the
 runner script is resolved as
-`<tcl4fpga_path>/tools/run_lint_project_inprocess.tcl`. aurig-core
-itself requires `tclsh` 8.5+ and (recommended) `tcllib`.
+`<aurig_lint_path>/tools/run_lint_project_inprocess.tcl`. aurig-lint
+(which requires aurig-core on the Tcl package path) itself needs
+`tclsh` 8.5+ and (recommended) `tcllib`.
 
-The baseline workflow exposed by aurig-core's runner (`-baseline`,
+The baseline workflow exposed by aurig-lint's runner (`-baseline`,
 `-only_new`, `-update_baseline`) is intentionally not surfaced in the
 v1 Sentinel schema; the first nightly run does not need incremental
 CI. Wiring those flags into the YAML lands as a follow-up OP if a
@@ -615,7 +618,7 @@ customer asks for it.
 phases:
   linting:
     enabled: true
-    tcl4fpga_path: /opt/aurig-core
+    aurig_lint_path: /opt/aurig-lint
     fail_on: error
     format: html
     output_dir: lint_output
@@ -759,7 +762,7 @@ Sentinel/
 - Git and local `fetch` with optional SSH key.
 - `pre_run` hooks (scripts + main program) with cross-platform script
   dispatch.
-- `linting` phase via `aurig-core`'s project lint runner (subprocess).
+- `linting` phase via `aurig-lint`'s project lint runner (subprocess).
 - `regression` phase with VUnit and convention backends across GHDL,
   ModelSim/Questa, Active-HDL, and Vivado xsim.
 - `synthesis` phase against repository-provided TCL scripts on Vivado.
@@ -767,7 +770,7 @@ Sentinel/
 
 ### In progress
 
-- `documentation` backend via `aurig-core` subprocess invocation.
+- `documentation` backend via `aurig-doc` subprocess invocation (planned).
 
 ### Planned
 
