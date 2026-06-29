@@ -18,13 +18,13 @@ entity led_blinker is
 end led_blinker;
 
 architecture RTL of led_blinker is
-    
+
     constant COUNT_MAX : integer := CLK_FREQ / (2 * BLINK_FREQ);
     signal counter : integer range 0 to COUNT_MAX := 0;
     signal led_reg : std_logic := '0';
-    
+
 begin
-    
+
     process(clk, rst)
     begin
         if rst = '1' then
@@ -39,7 +39,7 @@ begin
             end if;
         end if;
     end process;
-    
+
     led_out <= led_reg;
-    
+
 end RTL;

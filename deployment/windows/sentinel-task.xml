@@ -6,7 +6,7 @@
     <Description>Automated FPGA build pipeline that runs daily to fetch code, lint, synthesize, and deploy VHDL projects.</Description>
     <URI>\Sentinel\FPGA Build Pipeline</URI>
   </RegistrationInfo>
-  
+
   <Triggers>
     <!-- Daily at 2:00 AM -->
     <CalendarTrigger>
@@ -16,21 +16,21 @@
         <DaysInterval>1</DaysInterval>
       </ScheduleByDay>
     </CalendarTrigger>
-    
+
     <!-- On system startup (delayed 5 minutes) -->
     <BootTrigger>
       <Enabled>true</Enabled>
       <Delay>PT5M</Delay>
     </BootTrigger>
   </Triggers>
-  
+
   <Principals>
     <Principal id="Author">
       <UserId>S-1-5-18</UserId> <!-- SYSTEM account, change to your user SID -->
       <RunLevel>HighestAvailable</RunLevel>
     </Principal>
   </Principals>
-  
+
   <Settings>
     <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
     <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
@@ -52,7 +52,7 @@
     <ExecutionTimeLimit>PT3H</ExecutionTimeLimit>
     <Priority>7</Priority>
   </Settings>
-  
+
   <Actions Context="Author">
     <Exec>
       <Command>C:\Python310\python.exe</Command>

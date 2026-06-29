@@ -20,7 +20,7 @@ end simple_counter;
 architecture Behavioral of simple_counter is
     signal counter_reg : unsigned(WIDTH-1 downto 0) := (others => '0');
 begin
-    
+
     process(clk, rst)
     begin
         if rst = '1' then
@@ -31,7 +31,7 @@ begin
             end if;
         end if;
     end process;
-    
+
     count <= std_logic_vector(counter_reg);
-    
+
 end Behavioral;

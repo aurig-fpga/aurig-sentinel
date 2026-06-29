@@ -25,10 +25,10 @@ DOCUMENTATION:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Install with automated script:
-   
+
    cd deployment/systemd
    ./install.sh
-   
+
    The script will:
    ✓ Detect your Python and Sentinel paths
    ✓ Ask: Service, Timer, or Both?
@@ -58,7 +58,7 @@ DOCUMENTATION:
    sudo systemctl start sentinel.service     # Start now
    sudo systemctl stop sentinel.service      # Stop
    sudo systemctl restart sentinel.service   # Restart
-   
+
    sudo journalctl -u sentinel.service -f    # View logs (live)
    sudo journalctl -u sentinel.timer         # View timer logs
 
@@ -110,7 +110,7 @@ Manage tasks:
    # PowerShell
    Get-ScheduledTask -TaskPath "\Sentinel\"
    Start-ScheduledTask -TaskName "FPGA Build Pipeline" -TaskPath "\Sentinel\"
-   
+
    # Command Prompt
    schtasks /query /tn "Sentinel\FPGA Build Pipeline"
    schtasks /run /tn "Sentinel\FPGA Build Pipeline"
@@ -201,7 +201,7 @@ WINDOWS (sentinel-task.xml):
 LINUX - Service won't start:
   sudo systemctl status sentinel.service
   sudo journalctl -u sentinel.service -n 50
-  
+
   Common issues:
   • Wrong paths in service file
   • Python venv not found
@@ -211,7 +211,7 @@ LINUX - Service won't start:
 LINUX - Timer not triggering:
   systemctl list-timers --all
   sudo journalctl -u sentinel.timer
-  
+
   Check:
   • Timer is enabled: systemctl is-enabled sentinel.timer
   • Calendar format correct in timer file
@@ -224,7 +224,7 @@ WINDOWS - Task fails:
   4. Test command manually in PowerShell:
      cd C:\Sentinel
      C:\Python310\python.exe -m sentinel.main -config config\sentinel_local.json
-  
+
 WINDOWS - Task doesn't run on schedule:
   • Task is enabled?
   • Triggers configured correctly?
@@ -238,20 +238,20 @@ WINDOWS - Task doesn't run on schedule:
 LINUX:
   # Live logs
   sudo journalctl -u sentinel.service -f
-  
+
   # Errors in last 24 hours
   sudo journalctl -u sentinel.service --since "24 hours ago" | grep ERROR
-  
+
   # Resource usage
   systemctl status sentinel.service
 
 WINDOWS:
   # Task history
   Get-ScheduledTaskInfo -TaskName "FPGA Build Pipeline" -TaskPath "\Sentinel\"
-  
+
   # Live Sentinel logs
   Get-Content "C:\Sentinel\projects\<project>\runs\<latest>\logs\sentinel.log" -Wait
-  
+
   # Event Viewer
   eventvwr.msc → Task Scheduler logs
 
@@ -269,7 +269,7 @@ LINUX:
 WINDOWS:
   # PowerShell
   Unregister-ScheduledTask -TaskName "FPGA Build Pipeline" -TaskPath "\Sentinel\" -Confirm:$false
-  
+
   # Command Prompt
   schtasks /delete /tn "Sentinel\FPGA Build Pipeline" /f
 

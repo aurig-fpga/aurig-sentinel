@@ -124,13 +124,13 @@ fi
 if [ "$EXISTING_KEY" = false ]; then
     echo "[INFO] Generating ED25519 SSH key..."
     echo "       (No passphrase for automated access)"
-    
+
     ssh-keygen -t ed25519 \
         -C "sentinel@$(hostname)" \
         -f "$KEY_FILE" \
         -N "" \
         -q
-    
+
     echo "✅ SSH key generated"
     echo "   Private key: $KEY_FILE"
     echo "   Public key:  $KEY_FILE.pub"

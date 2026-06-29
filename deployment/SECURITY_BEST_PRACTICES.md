@@ -403,13 +403,13 @@ tar -xzf /backups/sentinel-data-YYYYMMDD.tar.gz -C /var/lib/sentinel
 
 ## Summary: Key Takeaways
 
-✅ **Dedicated system user is mandatory for production** - Not optional, industry standard  
-✅ **Defense in Depth** - User isolation + systemd hardening + filesystem permissions  
-✅ **Immutable application** - Root owns code/config, sentinel cannot modify itself  
-✅ **Minimal privileges** - Only write access to data/logs, everything else read-only  
-✅ **Resource limits** - Prevents DoS via memory/CPU exhaustion  
-✅ **Audit trail** - All actions traceable, easy to monitor  
-✅ **Attack surface reduction** - No login, no sudo, no setuid, limited network  
+✅ **Dedicated system user is mandatory for production** - Not optional, industry standard
+✅ **Defense in Depth** - User isolation + systemd hardening + filesystem permissions
+✅ **Immutable application** - Root owns code/config, sentinel cannot modify itself
+✅ **Minimal privileges** - Only write access to data/logs, everything else read-only
+✅ **Resource limits** - Prevents DoS via memory/CPU exhaustion
+✅ **Audit trail** - All actions traceable, easy to monitor
+✅ **Attack surface reduction** - No login, no sudo, no setuid, limited network
 
 **Bottom Line:** The dedicated `sentinel` user approach transforms Sentinel from a user script into a hardened production service that follows Linux security best practices and industry standards.
 
