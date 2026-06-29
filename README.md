@@ -583,7 +583,7 @@ phases with backends accept additional fields documented below.
 
 #### `phases.linting`
 
-Drives [aurig-core](https://github.com/aurig-fpga/aurig-core)'s project
+Drives [aurig-lint](https://github.com/aurig-fpga/aurig-lint)'s project
 lint runner (`tools/run_lint_project_inprocess.tcl`) as a subprocess.
 Sentinel passes the top-level `project_manifest` through as
 `-manifest`, captures stdout+stderr into `<run_dir>/logs/lint.log`,
@@ -598,7 +598,7 @@ and maps the runner's exit codes onto phase statuses (`0` →
 | `fail_on`        | enum            | `error`        | `error \| warning \| info \| any \| none`. Passed through as aurig-lint `-fail_on`. Default mirrors the aurig-lint single-file CLI. |
 | `format`         | enum            | `html`         | `html \| md \| csv \| text`. Passed through as `-format`.                          |
 | `output_dir`     | string          | `lint_output`  | Created under the run dir. Bundled into `artifacts/` by `bundle_zip`.              |
-| `policy`         | string          | unset          | Path to an aurig-core policy JSON. Relative paths are resolved against the fetched repo root (matching the `project_manifest` convention); absolute paths pass through unchanged for shared policies outside the repo. Passed through as `-policy`. |
+| `policy`         | string          | unset          | Path to an aurig-lint policy JSON. Relative paths are resolved against the fetched repo root (matching the `project_manifest` convention); absolute paths pass through unchanged for shared policies outside the repo. Passed through as `-policy`. |
 | `include`        | string          | unset          | Regex passed through as `-include`.                                                |
 | `exclude`        | string          | unset          | Regex passed through as `-exclude` (OR'd with `lint.excludes` from the manifest).  |
 
@@ -768,12 +768,9 @@ Sentinel/
 - `synthesis` phase against repository-provided TCL scripts on Vivado.
 - Time-window gating, retention-based cleanup, artifact bundling.
 
-### In progress
-
-- `documentation` backend via `aurig-doc` subprocess invocation (planned).
-
 ### Planned
 
+- `documentation` backend via `aurig-doc` subprocess invocation.
 - Multi-vendor synthesis (Quartus first, then Diamond).
 - `deployment` phase: bitstream programming and post-program verify.
 - Post-deployment testing phase (board-in-the-loop sanity checks).
