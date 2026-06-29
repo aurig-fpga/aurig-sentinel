@@ -193,7 +193,7 @@ integration themselves**, that is the proposition: Sentinel is the
 orchestrator, aurig-core is the HDL brain, and they are designed to
 compose. The `linting` backend ships today; the `documentation`
 backend lands through the items tracked under
-[Roadmap → In progress](#in-progress).
+[Roadmap → In progress](#planned).
 
 ## Quick Start
 
