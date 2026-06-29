@@ -64,14 +64,14 @@ pre_run:
 
 # Phase pipeline. At least one phase must be enabled.
 # `linting`, `regression`, and `synthesis` have backends; `documentation`
-# is accepted but emits a TODO(aurig-core) placeholder until that backend
+# is accepted but emits a TODO(aurig-doc) placeholder until that backend
 # stabilises. `deployment` is roadmap.
 phases:
   linting:
     enabled: false
-    # tcl4fpga_path is the path to a aurig-core checkout (repository root).
-    # If absent, Sentinel falls back to env SENTINEL_TCL4FPGA_PATH.
-    # tcl4fpga_path: /opt/aurig-core
+    # aurig_lint_path is the path to an aurig-lint checkout (repository root).
+    # If absent, Sentinel falls back to env SENTINEL_AURIG_LINT_PATH.
+    # aurig_lint_path: /opt/aurig-lint
     # tclsh_path: tclsh                            # default; override if not on PATH
     # fail_on: error                                # error | warning | note | any | none
     # format:  html                                 # html | md | csv | text
