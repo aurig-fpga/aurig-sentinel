@@ -117,13 +117,13 @@ def _run_vivado_synthesis_custom(synthesis_config: Dict[str, Any], ctx: RunConte
             logger.error("Configured synthesis script not found: %s", script_path)
             return {"status": "error", "message": f"Synthesis script not found: {repo_script}"}
         repo_script = script_path
-    
+
     if not repo_script or not os.path.exists(repo_script):
         logger.error("No synthesis script found in repository. Expected scripts/run_synthesis.tcl or similar.")
         return {"status": "error", "message": "Repository synthesis script not found"}
-    
+
     logger.info("Using repository synthesis script: %s", repo_script)
-    
+
     # Prepare environment - add synthesis tool to PATH
     env = os.environ.copy()
     vivado_bin = os.path.join(synthesis_tool_path, 'bin')
@@ -148,7 +148,7 @@ def _run_vivado_synthesis_custom(synthesis_config: Dict[str, Any], ctx: RunConte
 
     logger.info("Running Vivado: %s", ' '.join(vivado_cmd))
     logger.info("Working directory: %s", output_dir)
-    
+
     try:
         result = subprocess.run(
             vivado_cmd,
@@ -158,7 +158,7 @@ def _run_vivado_synthesis_custom(synthesis_config: Dict[str, Any], ctx: RunConte
             env=env,
             timeout=3600  # 1 hour timeout
         )
-        
+
         # Write stdout/stderr to log
         combined_log = os.path.join(output_dir, 'synthesis_full.log')
         with open(combined_log, 'w') as f:
@@ -167,10 +167,10 @@ def _run_vivado_synthesis_custom(synthesis_config: Dict[str, Any], ctx: RunConte
             f.write(result.stdout)
             f.write("\n=== STDERR ===\n")
             f.write(result.stderr)
-        
+
         if result.returncode == 0:
             logger.info("Vivado synthesis completed successfully")
-            
+
             # Check for expected reports
             missing_reports = []
             expected_reports = synthesis_config.get('options', {}).get('expected_reports', [])
@@ -178,10 +178,10 @@ def _run_vivado_synthesis_custom(synthesis_config: Dict[str, Any], ctx: RunConte
                 report_path = os.path.join(output_dir, report)
                 if not os.path.exists(report_path):
                     missing_reports.append(report)
-            
+
             if missing_reports:
                 logger.warning("Expected reports not found: %s", missing_reports)
-            
+
             return {
                 "status": "completed",
                 "tool": "vivado",
@@ -193,7 +193,7 @@ def _run_vivado_synthesis_custom(synthesis_config: Dict[str, Any], ctx: RunConte
         else:
             logger.error("Vivado synthesis failed with return code %s", result.returncode)
             logger.error("STDERR: %s", result.stderr)
-            
+
             return {
                 "status": "failed",
                 "tool": "vivado",
@@ -208,7 +208,7 @@ def _run_vivado_synthesis_custom(synthesis_config: Dict[str, Any], ctx: RunConte
                 "log_file": log_file,
                 "full_log_file": combined_log,
             }
-            
+
     except subprocess.TimeoutExpired:
         logger.error("Vivado synthesis timed out after 1 hour")
         return {"status": "failed", "error": "Timeout", "log_file": log_file}
@@ -225,4 +225,3 @@ def _run_quartus_synthesis_custom(synthesis_config: Dict[str, Any], ctx: RunCont
     """Run Quartus synthesis using repository-provided script (placeholder)."""
     logger.error("Quartus synthesis with custom scripts not yet implemented")
     return {"status": "error", "message": "Quartus not implemented"}
-
