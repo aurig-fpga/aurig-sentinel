@@ -1720,6 +1720,14 @@ class TestLintingSchemaValidation(unittest.TestCase):
         errors = self._validate({"enabled": True, "fail_on": "panic"}) or []
         self.assertTrue(any("fail_on" in e for e in errors), errors)
 
+    def test_rejects_legacy_note_fail_on(self):
+        # "note" is a pre-carve fossil: the aurig-lint engine standardised
+        # on info|warning|error and its runner explicitly rejects "note".
+        # Sentinel's validator must reject it too so it never forwards a
+        # value the runner will refuse.
+        errors = self._validate({"enabled": True, "fail_on": "note"}) or []
+        self.assertTrue(any("fail_on" in e for e in errors), errors)
+
     def test_rejects_invalid_format(self):
         errors = self._validate({"enabled": True, "format": "pdf"}) or []
         self.assertTrue(any("format" in e for e in errors), errors)

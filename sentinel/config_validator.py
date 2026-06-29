@@ -34,7 +34,7 @@ SUPPORTED_SCHEMA_VERSIONS = {"1.0"}
 VALID_LOG_LEVELS = {"quiet", "normal", "verbose"}
 VALID_FETCH_TYPES = {"git", "local"}
 KNOWN_PHASES = ("linting", "documentation", "regression", "synthesis", "deployment")
-VALID_LINTING_FAIL_ON = {"error", "warning", "note", "any", "none"}
+VALID_LINTING_FAIL_ON = {"error", "warning", "info", "any", "none"}
 VALID_LINTING_FORMATS = {"html", "md", "csv", "text"}
 
 

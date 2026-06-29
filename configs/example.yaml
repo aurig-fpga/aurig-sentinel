@@ -73,7 +73,7 @@ phases:
     # If absent, Sentinel falls back to env SENTINEL_AURIG_LINT_PATH.
     # aurig_lint_path: /opt/aurig-lint
     # tclsh_path: tclsh                            # default; override if not on PATH
-    # fail_on: error                                # error | warning | note | any | none
+    # fail_on: error                                # error | warning | info | any | none
     # format:  html                                 # html | md | csv | text
     # output_dir: lint_output                       # under <run_dir>/
     # policy: lint/lint_user.json                   # optional, relative or absolute

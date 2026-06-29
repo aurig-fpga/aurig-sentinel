@@ -593,7 +593,7 @@ and maps the runner's exit codes onto phase statuses (`0` →
 | `enabled`        | bool            | `false`        |                                                                                    |
 | `tcl4fpga_path`  | string          | unset          | Required at runtime. Falls back to env `SENTINEL_TCL4FPGA_PATH` when absent.       |
 | `tclsh_path`     | string          | `tclsh`        | Resolved on `PATH` at runtime.                                                     |
-| `fail_on`        | enum            | `error`        | `error \| warning \| note \| any \| none`. Passed through as aurig-core `-fail_on`. Default mirrors the aurig-core single-file CLI. |
+| `fail_on`        | enum            | `error`        | `error \| warning \| info \| any \| none`. Passed through as aurig-lint `-fail_on`. Default mirrors the aurig-lint single-file CLI. |
 | `format`         | enum            | `html`         | `html \| md \| csv \| text`. Passed through as `-format`.                          |
 | `output_dir`     | string          | `lint_output`  | Created under the run dir. Bundled into `artifacts/` by `bundle_zip`.              |
 | `policy`         | string          | unset          | Path to an aurig-core policy JSON. Relative paths are resolved against the fetched repo root (matching the `project_manifest` convention); absolute paths pass through unchanged for shared policies outside the repo. Passed through as `-policy`. |
