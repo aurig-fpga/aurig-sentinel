@@ -1225,21 +1225,21 @@ class TestSynthesisPhase(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Linting phase (OP-040): aurig-core project lint runner via subprocess
+# Linting phase (OP-040): aurig-lint project lint runner via subprocess
 # ---------------------------------------------------------------------------
 
 class TestLintingPhase(unittest.TestCase):
-    """run_linting() against the aurig-core project lint runner."""
+    """run_linting() against the aurig-lint project lint runner."""
 
     def setUp(self):
         self.test_dir = Path(tempfile.mkdtemp())
         self.run_dir = self.test_dir / "run"
         self.run_dir.mkdir()
 
-        # Stage a aurig-core checkout with the runner script in place.
-        self.tcl4fpga_dir = self.test_dir / "aurig-core"
-        (self.tcl4fpga_dir / "tools").mkdir(parents=True)
-        (self.tcl4fpga_dir / "tools" / "run_lint_project_inprocess.tcl").write_text(
+        # Stage a aurig-lint checkout with the runner script in place.
+        self.aurig_lint_dir = self.test_dir / "aurig-lint"
+        (self.aurig_lint_dir / "tools").mkdir(parents=True)
+        (self.aurig_lint_dir / "tools" / "run_lint_project_inprocess.tcl").write_text(
             "# fake project lint runner\n", encoding="utf-8"
         )
 
@@ -1251,13 +1251,13 @@ class TestLintingPhase(unittest.TestCase):
         )
 
         # Make sure the env var doesn't leak in from outside.
-        self._prev_env = os.environ.pop("SENTINEL_TCL4FPGA_PATH", None)
+        self._prev_env = os.environ.pop("SENTINEL_AURIG_LINT_PATH", None)
 
     def tearDown(self):
         if self._prev_env is not None:
-            os.environ["SENTINEL_TCL4FPGA_PATH"] = self._prev_env
+            os.environ["SENTINEL_AURIG_LINT_PATH"] = self._prev_env
         else:
-            os.environ.pop("SENTINEL_TCL4FPGA_PATH", None)
+            os.environ.pop("SENTINEL_AURIG_LINT_PATH", None)
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir, ignore_errors=True)
 
@@ -1274,7 +1274,7 @@ class TestLintingPhase(unittest.TestCase):
             "phases": {
                 "linting": {
                     "enabled": True,
-                    "tcl4fpga_path": str(self.tcl4fpga_dir),
+                    "aurig_lint_path": str(self.aurig_lint_dir),
                 }
             },
         }
@@ -1289,20 +1289,20 @@ class TestLintingPhase(unittest.TestCase):
         result = run_linting(cfg, self._ctx())
         self.assertEqual(result.get("status"), "skipped")
 
-    def test_missing_tcl4fpga_path_in_config_and_env_returns_error(self):
+    def test_missing_aurig_lint_path_in_config_and_env_returns_error(self):
         from sentinel.linting import run_linting
-        # No tcl4fpga_path field, env var cleared in setUp.
+        # No aurig_lint_path field, env var cleared in setUp.
         cfg = {
             "project_manifest": "manifest.yaml",
             "phases": {"linting": {"enabled": True}},
         }
         result = run_linting(cfg, self._ctx())
         self.assertEqual(result.get("status"), "error")
-        self.assertIn("tcl4fpga_path", result.get("message", ""))
+        self.assertIn("aurig_lint_path", result.get("message", ""))
 
-    def test_env_var_provides_tcl4fpga_path_when_yaml_field_absent(self):
+    def test_env_var_provides_aurig_lint_path_when_yaml_field_absent(self):
         from sentinel.linting import run_linting
-        os.environ["SENTINEL_TCL4FPGA_PATH"] = str(self.tcl4fpga_dir)
+        os.environ["SENTINEL_AURIG_LINT_PATH"] = str(self.aurig_lint_dir)
         cfg = {
             "project_manifest": "manifest.yaml",
             "phases": {"linting": {"enabled": True}},
@@ -1315,19 +1315,19 @@ class TestLintingPhase(unittest.TestCase):
         self.assertEqual(result.get("status"), "completed")
         self.assertEqual(mock_run.call_count, 1)
 
-    def test_tcl4fpga_path_not_a_directory_returns_error(self):
+    def test_aurig_lint_path_not_a_directory_returns_error(self):
         from sentinel.linting import run_linting
-        bogus = self.test_dir / "nonexistent_tcl4fpga"
-        cfg = self._config(tcl4fpga_path=str(bogus))
+        bogus = self.test_dir / "nonexistent_aurig_lint"
+        cfg = self._config(aurig_lint_path=str(bogus))
         result = run_linting(cfg, self._ctx())
         self.assertEqual(result.get("status"), "error")
-        self.assertIn("tcl4fpga_path", result.get("message", ""))
+        self.assertIn("aurig_lint_path", result.get("message", ""))
 
     def test_missing_runner_script_returns_error(self):
         from sentinel.linting import run_linting
-        # Remove the runner script so tcl4fpga_path is a directory but
+        # Remove the runner script so aurig_lint_path is a directory but
         # the runner isn't where Sentinel expects it.
-        (self.tcl4fpga_dir / "tools" / "run_lint_project_inprocess.tcl").unlink()
+        (self.aurig_lint_dir / "tools" / "run_lint_project_inprocess.tcl").unlink()
         result = run_linting(self._config(), self._ctx())
         self.assertEqual(result.get("status"), "error")
         self.assertIn(
@@ -1371,7 +1371,7 @@ class TestLintingPhase(unittest.TestCase):
 
     @patch("sentinel.linting.subprocess.run")
     def test_lint_findings_return_failed_with_stderr_tail(self, mock_run):
-        """rc=1 from aurig-core means diagnostics ≥ fail_on threshold.
+        """rc=1 from aurig-lint means diagnostics ≥ fail_on threshold.
         Sentinel maps that onto ``failed`` so ``continue_on_error``
         controls whether the next phase runs.
         """
@@ -1395,7 +1395,7 @@ class TestLintingPhase(unittest.TestCase):
 
     @patch("sentinel.linting.subprocess.run")
     def test_lint_tool_error_returns_error_status(self, mock_run):
-        """rc=2 from aurig-core is a tool error (broken setup, malformed
+        """rc=2 from aurig-lint is a tool error (broken setup, malformed
         manifest, etc.) — distinct from a code-quality failure. Sentinel
         maps it onto ``error`` so operators see "broken setup" rather
         than "lint regression".
@@ -1411,8 +1411,8 @@ class TestLintingPhase(unittest.TestCase):
 
     @patch("sentinel.linting.subprocess.run")
     def test_unexpected_exit_code_returns_error_not_failed(self, mock_run):
-        """aurig-core's documented contract is 0/1/2. An unexpected
-        non-zero code (aurig-core bug, tclsh crash, future contract
+        """aurig-lint's documented contract is 0/1/2. An unexpected
+        non-zero code (aurig-lint bug, tclsh crash, future contract
         drift) is a tool/setup issue, not a code-quality regression.
         Map it to ``error`` like rc=2, so the operator does not see
         "lint failed" for what is really "broken tool".
@@ -1521,7 +1521,7 @@ class TestLintingPhase(unittest.TestCase):
     def test_missing_manifest_file_returns_targeted_error(self):
         """When the manifest path resolves under repo_root but the
         file is absent, surface a targeted error before invoking
-        ``tclsh`` (the aurig-core runner would also fail, but with a
+        ``tclsh`` (the aurig-lint runner would also fail, but with a
         less specific message).
         """
         from sentinel.linting import run_linting
@@ -1594,7 +1594,7 @@ class TestLintingPhase(unittest.TestCase):
         cmd = mock_run.call_args[0][0]
         policy_idx = cmd.index("-policy")
         passed_policy = cmd[policy_idx + 1]
-        # The policy path that reaches aurig-core must be absolute and
+        # The policy path that reaches aurig-lint must be absolute and
         # rooted at the fetched repo, not the test CWD.
         self.assertTrue(
             Path(passed_policy).is_absolute(),
@@ -1648,7 +1648,7 @@ class TestLintingPhase(unittest.TestCase):
     def test_subprocess_runs_with_repo_root_as_cwd(self, mock_run):
         """Belt-and-suspenders: set ``cwd=repo_root`` on the
         subprocess so any latent relative-path resolution inside
-        aurig-core (anything Sentinel does not pass explicitly) uses
+        aurig-lint (anything Sentinel does not pass explicitly) uses
         the same base as the documented contract.
         """
         from sentinel.linting import run_linting
@@ -1699,14 +1699,14 @@ class TestLintingSchemaValidation(unittest.TestCase):
 
     def test_accepts_minimal_block(self):
         # `enabled: true` alone is valid: every other field has a
-        # runtime default, and tcl4fpga_path is checked at runtime via
+        # runtime default, and aurig_lint_path is checked at runtime via
         # the env-var fallback contract.
         self.assertIsNone(self._validate({"enabled": True}))
 
     def test_accepts_full_block(self):
         self.assertIsNone(self._validate({
             "enabled": True,
-            "tcl4fpga_path": "/opt/aurig-core",
+            "aurig_lint_path": "/opt/aurig-lint",
             "tclsh_path": "tclsh",
             "fail_on": "warning",
             "format": "md",
@@ -1724,10 +1724,10 @@ class TestLintingSchemaValidation(unittest.TestCase):
         errors = self._validate({"enabled": True, "format": "pdf"}) or []
         self.assertTrue(any("format" in e for e in errors), errors)
 
-    def test_rejects_empty_tcl4fpga_path(self):
-        errors = self._validate({"enabled": True, "tcl4fpga_path": ""}) or []
+    def test_rejects_empty_aurig_lint_path(self):
+        errors = self._validate({"enabled": True, "aurig_lint_path": ""}) or []
         self.assertTrue(
-            any("tcl4fpga_path" in e for e in errors), errors
+            any("aurig_lint_path" in e for e in errors), errors
         )
 
     def test_rejects_non_string_include_regex(self):
