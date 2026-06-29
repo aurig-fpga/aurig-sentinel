@@ -264,7 +264,7 @@ def execute_phases(config: Dict[str, Any], config_path: str) -> Dict[str, Any]:
         else:
             phase_results["pre_run"] = {"status": "SKIPPED"}
 
-        # linting (OP-040): wired to aurig-core's project lint runner via subprocess.
+        # linting (OP-040): wired to aurig-lint's project lint runner via subprocess.
         if _phase_enabled(config, "linting"):
             try:
                 from .linting import run_linting  # lazy
@@ -305,12 +305,12 @@ def execute_phases(config: Dict[str, Any], config_path: str) -> Dict[str, Any]:
         else:
             phase_results["linting"] = {"status": "SKIPPED"}
 
-        # documentation: backend still pending (aurig-core document module
+        # documentation: backend still pending (aurig-doc document module
         # is "Partial" per its README); placeholder behavior unchanged
         # until that backend stabilises.
         if _phase_enabled(config, "documentation"):
             logging.info(
-                "Phase 'documentation' enabled but no backend integrated yet (TODO: aurig-core)"
+                "Phase 'documentation' enabled but no backend integrated yet (TODO: aurig-doc)"
             )
             phase_results["documentation"] = {"status": "PENDING", "note": "no backend integrated"}
         else:

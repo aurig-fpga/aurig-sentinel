@@ -373,7 +373,7 @@ def _validate_phases(config: Dict[str, Any], errors: List[str]) -> None:
 def _validate_linting(config: Dict[str, Any], errors: List[str]) -> None:
     """Validate the phases.linting subblock (format-only).
 
-    The values that touch the host filesystem (``tcl4fpga_path``,
+    The values that touch the host filesystem (``aurig_lint_path``,
     ``tclsh_path``, ``policy``) are not checked here — existence is
     verified by :mod:`sentinel.linting` at run time, per the
     module-level validation-vs-runtime contract. Any field that is
@@ -384,10 +384,10 @@ def _validate_linting(config: Dict[str, Any], errors: List[str]) -> None:
     if not isinstance(lint, dict):
         return
 
-    tcl4fpga_path = lint.get("tcl4fpga_path")
-    if tcl4fpga_path is not None and not _is_str(tcl4fpga_path):
+    aurig_lint_path = lint.get("aurig_lint_path")
+    if aurig_lint_path is not None and not _is_str(aurig_lint_path):
         errors.append(
-            "phases.linting.tcl4fpga_path must be a non-empty string when present"
+            "phases.linting.aurig_lint_path must be a non-empty string when present"
         )
 
     tclsh_path = lint.get("tclsh_path")
