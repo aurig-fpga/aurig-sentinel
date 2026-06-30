@@ -305,14 +305,42 @@ def execute_phases(config: Dict[str, Any], config_path: str) -> Dict[str, Any]:
         else:
             phase_results["linting"] = {"status": "SKIPPED"}
 
-        # documentation: backend still pending (aurig-doc document module
-        # is "Partial" per its README); placeholder behavior unchanged
-        # until that backend stabilises.
+        # documentation: wired to aurig-doc's project document runner via
+        # subprocess. Mirrors the linting block above — the only contract
+        # difference is the exit-code mapping (doc has no exit 1 / no
+        # quality-failure notion; see sentinel.documentation).
         if _phase_enabled(config, "documentation"):
-            logging.info(
-                "Phase 'documentation' enabled but no backend integrated yet (TODO: aurig-doc)"
-            )
-            phase_results["documentation"] = {"status": "PENDING", "note": "no backend integrated"}
+            try:
+                from .documentation import run_documentation  # lazy
+                doc_result = run_documentation(config, ctx)
+                if doc_result:
+                    # Propagate diagnostic context into phase_results so
+                    # the end-of-run summary loop and downstream tooling
+                    # can surface "why" alongside "what" — same as linting.
+                    entry: Dict[str, Any] = {
+                        "status": doc_result.get("status", "OK"),
+                    }
+                    for key in ("error", "message", "log_file",
+                                "full_log_file", "output_dir", "exit_code"):
+                        value = doc_result.get(key)
+                        if value is not None:
+                            entry[key] = value
+                    phase_results["documentation"] = entry
+                    if doc_result.get("output_dir"):
+                        artifact_paths.append(doc_result["output_dir"])
+                    _abort_if_failed(
+                        "documentation",
+                        entry["status"],
+                        continue_on_error,
+                        detail=(doc_result.get("message")
+                                or doc_result.get("error") or ""),
+                    )
+                else:
+                    phase_results["documentation"] = {"status": "SKIPPED"}
+            except Exception as exc:
+                phase_results["documentation"] = {"status": "FAILED", "error": str(exc)}
+                if not continue_on_error:
+                    raise
         else:
             phase_results["documentation"] = {"status": "SKIPPED"}
 

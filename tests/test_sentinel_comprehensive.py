@@ -1794,6 +1794,276 @@ class TestLintingSchemaValidation(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Documentation phase (aurig-doc project document runner)
+# ---------------------------------------------------------------------------
+
+class TestDocumentationPhase(unittest.TestCase):
+    """run_documentation() against the aurig-doc project document runner.
+
+    Modeled on ``TestLintingPhase``: a stub runner script on disk makes
+    the runner-presence check pass, and ``subprocess.run`` is patched to
+    control the exit code (the same fixture machinery the linting tests
+    use). The documentation contract is simpler than lint's — exit 0 ->
+    ``completed``, exit 2 (or any other non-zero) -> ``error``, never
+    ``failed``.
+    """
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp())
+        self.run_dir = self.test_dir / "run"
+        self.run_dir.mkdir()
+
+        # Stage an aurig-doc checkout with the runner script in place.
+        self.aurig_doc_dir = self.test_dir / "aurig-doc"
+        (self.aurig_doc_dir / "tools").mkdir(parents=True)
+        (self.aurig_doc_dir / "tools" / "run_doc_project_inprocess.tcl").write_text(
+            "# fake project document runner\n", encoding="utf-8"
+        )
+
+        # Stage a fetched repo so the OP-034 guard passes.
+        self.repo_dir = self.test_dir / "repo"
+        self.repo_dir.mkdir()
+        (self.repo_dir / "manifest.yaml").write_text(
+            "project_name: demo\n", encoding="utf-8"
+        )
+
+        # Make sure the env var doesn't leak in from outside.
+        self._prev_env = os.environ.pop("SENTINEL_AURIG_DOC_PATH", None)
+
+    def tearDown(self):
+        if self._prev_env is not None:
+            os.environ["SENTINEL_AURIG_DOC_PATH"] = self._prev_env
+        else:
+            os.environ.pop("SENTINEL_AURIG_DOC_PATH", None)
+        if self.test_dir.exists():
+            shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def _ctx(self, with_repo: bool = True):
+        from sentinel import RunContext
+        ctx = RunContext.for_run(self.run_dir)
+        if with_repo:
+            ctx.repo_path = self.repo_dir
+        return ctx
+
+    def _config(self, project_manifest="manifest.yaml", **doc_overrides):
+        cfg = {
+            "project_manifest": project_manifest,
+            "phases": {
+                "documentation": {
+                    "enabled": True,
+                    "aurig_doc_path": str(self.aurig_doc_dir),
+                }
+            },
+        }
+        cfg["phases"]["documentation"].update(doc_overrides)
+        return cfg
+
+    # ---- disabled / config-error paths ----
+
+    def test_phase_disabled_returns_skipped(self):
+        from sentinel.documentation import run_documentation
+        cfg = self._config(enabled=False)
+        result = run_documentation(cfg, self._ctx())
+        self.assertEqual(result.get("status"), "skipped")
+
+    def test_missing_aurig_doc_path_in_config_and_env_returns_error(self):
+        from sentinel.documentation import run_documentation
+        # No aurig_doc_path field, env var cleared in setUp.
+        cfg = {
+            "project_manifest": "manifest.yaml",
+            "phases": {"documentation": {"enabled": True}},
+        }
+        result = run_documentation(cfg, self._ctx())
+        self.assertEqual(result.get("status"), "error")
+        self.assertIn("aurig_doc_path", result.get("message", ""))
+
+    def test_env_var_provides_aurig_doc_path_when_yaml_field_absent(self):
+        from sentinel.documentation import run_documentation
+        os.environ["SENTINEL_AURIG_DOC_PATH"] = str(self.aurig_doc_dir)
+        cfg = {
+            "project_manifest": "manifest.yaml",
+            "phases": {"documentation": {"enabled": True}},
+        }
+        with patch("sentinel.documentation.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            result = run_documentation(cfg, self._ctx())
+        self.assertEqual(result.get("status"), "completed")
+        self.assertEqual(mock_run.call_count, 1)
+
+    def test_missing_runner_script_returns_error(self):
+        from sentinel.documentation import run_documentation
+        (self.aurig_doc_dir / "tools" / "run_doc_project_inprocess.tcl").unlink()
+        result = run_documentation(self._config(), self._ctx())
+        self.assertEqual(result.get("status"), "error")
+        self.assertIn(
+            "run_doc_project_inprocess.tcl", result.get("message", "")
+        )
+
+    # ---- success / error mapping (no exit 1, never "failed") ----
+
+    @patch("sentinel.documentation.subprocess.run")
+    def test_doc_success_returns_completed(self, mock_run):
+        from sentinel.documentation import run_documentation
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="docs generated", stderr="",
+        )
+        result = run_documentation(self._config(), self._ctx())
+        self.assertEqual(result.get("status"), "completed")
+        self.assertEqual(result.get("exit_code"), 0)
+        self.assertTrue(result.get("output_dir"))
+        # The command must include the manifest, the runner script, and
+        # the default html format.
+        cmd = mock_run.call_args[0][0]
+        self.assertIn("-manifest", cmd)
+        manifest_idx = cmd.index("-manifest")
+        self.assertTrue(cmd[manifest_idx + 1].endswith("manifest.yaml"))
+        self.assertTrue(any(
+            arg.endswith("run_doc_project_inprocess.tcl") for arg in cmd
+        ))
+        self.assertIn("-format", cmd)
+        self.assertEqual(cmd[cmd.index("-format") + 1], "html")
+        # No quality-threshold flag is ever forwarded.
+        self.assertNotIn("-fail_on", cmd)
+
+    @patch("sentinel.documentation.subprocess.run")
+    def test_doc_tool_error_returns_error_status(self, mock_run):
+        """rc=2 from aurig-doc is a tool/setup error. Documentation has
+        no quality-failure notion, so this maps to ``error`` (never
+        ``failed``).
+        """
+        from sentinel.documentation import run_documentation
+        mock_run.return_value = MagicMock(
+            returncode=2, stdout="", stderr="tool error: cannot parse manifest",
+        )
+        result = run_documentation(self._config(), self._ctx())
+        self.assertEqual(result.get("status"), "error")
+        self.assertEqual(result.get("exit_code"), 2)
+        self.assertIn("tool error", result.get("error", "").lower())
+
+    @patch("sentinel.documentation.subprocess.run")
+    def test_unexpected_exit_code_returns_error_not_failed(self, mock_run):
+        """aurig-doc's contract is 0/2 only (no exit 1). An unexpected
+        non-zero code is a tool/setup issue, mapped to ``error`` like
+        rc=2 — documentation never returns ``failed``.
+        """
+        from sentinel.documentation import run_documentation
+        mock_run.return_value = MagicMock(
+            returncode=99, stdout="", stderr="something unexpected",
+        )
+        result = run_documentation(self._config(), self._ctx())
+        self.assertEqual(result.get("status"), "error")
+        self.assertEqual(result.get("exit_code"), 99)
+        self.assertIn("99", result.get("error", ""))
+
+    @patch("sentinel.documentation.subprocess.run")
+    def test_doc_timeout_returns_error(self, mock_run):
+        from sentinel.documentation import run_documentation
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="tclsh", timeout=1800)
+        result = run_documentation(self._config(), self._ctx())
+        # No "failed" anywhere — timeout is an error like every other
+        # non-success path.
+        self.assertEqual(result.get("status"), "error")
+        self.assertIn("Timeout", result.get("error", ""))
+
+    @patch("sentinel.documentation.subprocess.run")
+    def test_verbosity_passed_through_when_configured(self, mock_run):
+        from sentinel.documentation import run_documentation
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        result = run_documentation(self._config(verbosity=3, format="md"), self._ctx())
+        self.assertEqual(result.get("status"), "completed")
+        cmd = mock_run.call_args[0][0]
+        self.assertIn("-verbosity", cmd)
+        self.assertEqual(cmd[cmd.index("-verbosity") + 1], "3")
+        self.assertEqual(cmd[cmd.index("-format") + 1], "md")
+
+    @patch("sentinel.documentation.subprocess.run")
+    def test_verbosity_omitted_when_unconfigured(self, mock_run):
+        from sentinel.documentation import run_documentation
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+        run_documentation(self._config(), self._ctx())
+        cmd = mock_run.call_args[0][0]
+        self.assertNotIn("-verbosity", cmd)
+
+    @patch("sentinel.documentation.subprocess.run")
+    def test_doc_log_written_on_success(self, mock_run):
+        from sentinel.documentation import run_documentation
+        mock_run.return_value = MagicMock(returncode=0, stdout="hi", stderr="")
+        result = run_documentation(self._config(), self._ctx())
+        log_file = result.get("log_file")
+        self.assertTrue(log_file)
+        self.assertTrue(Path(log_file).is_file())
+        self.assertTrue(log_file.endswith("documentation.log"))
+
+    # ---- continue_on_error abort through the pipeline ----
+
+    def test_pipeline_aborts_when_doc_errors_and_strict(self):
+        """With ``continue_on_error=False``, a documentation phase that
+        returns status ``error`` must abort the run — exactly like
+        linting. Here the error is the missing-aurig_doc_path path
+        (env cleared in setUp), which returns status ``error`` before
+        any subprocess is launched.
+        """
+        from sentinel.main import execute_phases
+        cfg = {
+            "project": {"name": "doc-abort-demo"},
+            "project_manifest": "manifest.yaml",
+            "fetch": {"enabled": False},
+            "global_settings": {"continue_on_error": False},
+            "output": {"base_dir": str(self.test_dir / "runs"), "bundle_zip": False},
+            "phases": {"documentation": {"enabled": True}},
+        }
+        with self.assertRaises(RuntimeError) as ctx:
+            execute_phases(cfg, "<test>")
+        self.assertIn("documentation", str(ctx.exception))
+
+
+class TestDocumentationSchemaValidation(unittest.TestCase):
+    """validate_config() coverage for the phases.documentation subblock."""
+
+    def _validate(self, documentation_block):
+        from sentinel.config_validator import validate_config, ConfigValidationError
+        cfg = {
+            "schema_version": "1.0",
+            "project": {"name": "demo"},
+            "fetch": {"type": "git", "url": "https://example.com/r.git"},
+            "project_manifest": "manifest.yaml",
+            "phases": {"documentation": documentation_block},
+        }
+        try:
+            validate_config(cfg)
+            return None
+        except ConfigValidationError as exc:
+            return exc.errors
+
+    def test_accepts_minimal_block(self):
+        self.assertIsNone(self._validate({"enabled": True}))
+
+    def test_accepts_full_block(self):
+        self.assertIsNone(self._validate({
+            "enabled": True,
+            "aurig_doc_path": "/opt/aurig-doc",
+            "tclsh_path": "tclsh",
+            "format": "md",
+            "output_dir": "doc_output",
+        }))
+
+    def test_rejects_invalid_format(self):
+        # csv/text are valid for lint but NOT for doc.
+        errors = self._validate({"enabled": True, "format": "csv"}) or []
+        self.assertTrue(any("format" in e for e in errors), errors)
+
+    def test_rejects_empty_aurig_doc_path(self):
+        errors = self._validate({"enabled": True, "aurig_doc_path": ""}) or []
+        self.assertTrue(any("aurig_doc_path" in e for e in errors), errors)
+
+    def test_rejects_output_dir_with_dotdot(self):
+        errors = self._validate({"enabled": True, "output_dir": "../escape"}) or []
+        self.assertTrue(
+            any("output_dir" in e and ".." in e for e in errors), errors
+        )
+
+
+# ---------------------------------------------------------------------------
 # Regression / VUnit backend (sys.executable, _vunit_is_importable contract)
 # ---------------------------------------------------------------------------
 
