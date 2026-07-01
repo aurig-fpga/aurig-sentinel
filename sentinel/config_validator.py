@@ -36,6 +36,8 @@ VALID_FETCH_TYPES = {"git", "local"}
 KNOWN_PHASES = ("linting", "documentation", "regression", "synthesis", "deployment")
 VALID_LINTING_FAIL_ON = {"error", "warning", "info", "any", "none"}
 VALID_LINTING_FORMATS = {"html", "md", "csv", "text"}
+# aurig-doc emits only HTML/MD — no csv/text like lint.
+VALID_DOCUMENTATION_FORMATS = {"html", "md"}
 
 
 class ConfigValidationError(Exception):
@@ -464,6 +466,69 @@ def _validate_linting(config: Dict[str, Any], errors: List[str]) -> None:
         )
 
 
+def _validate_documentation(config: Dict[str, Any], errors: List[str]) -> None:
+    """Validate the phases.documentation subblock (format-only).
+
+    Twin of :func:`_validate_linting`, but for the documentation phase.
+    Values that touch the host filesystem (``aurig_doc_path``,
+    ``tclsh_path``) are not checked here — existence is verified by
+    :mod:`sentinel.documentation` at run time, per the module-level
+    validation-vs-runtime contract. Any field that is present is
+    validated; absent fields fall back to their runtime defaults inside
+    :mod:`sentinel.documentation`.
+
+    Note the documentation phase has no ``fail_on`` / ``policy`` /
+    ``include`` / ``exclude`` — those are lint-specific. Documentation
+    has no quality-threshold notion, so its format vocabulary is
+    narrower too (``html`` / ``md`` only).
+    """
+    doc = (config.get("phases") or {}).get("documentation")
+    if not isinstance(doc, dict):
+        return
+
+    aurig_doc_path = doc.get("aurig_doc_path")
+    if aurig_doc_path is not None and not _is_str(aurig_doc_path):
+        errors.append(
+            "phases.documentation.aurig_doc_path must be a non-empty string when present"
+        )
+
+    tclsh_path = doc.get("tclsh_path")
+    if tclsh_path is not None and not _is_str(tclsh_path):
+        errors.append(
+            "phases.documentation.tclsh_path must be a non-empty string when present"
+        )
+
+    fmt = doc.get("format")
+    if fmt is not None and fmt not in VALID_DOCUMENTATION_FORMATS:
+        errors.append(
+            "phases.documentation.format must be one of: "
+            f"{', '.join(sorted(VALID_DOCUMENTATION_FORMATS))}"
+        )
+
+    output_dir = doc.get("output_dir")
+    if output_dir is not None:
+        if not _is_str(output_dir):
+            errors.append(
+                "phases.documentation.output_dir must be a non-empty string when present"
+            )
+        else:
+            # output_dir is resolved under <run_dir>/ at runtime; an
+            # absolute path, a ``..`` segment, or a value that
+            # normalizes to ``.`` would let the phase write outside the
+            # run directory. Catch it at config-load time — same rule as
+            # phases.linting.output_dir (see _validate_linting for the
+            # full rationale and the empty-parts ``.`` / ``./`` note).
+            p = Path(output_dir)
+            if p.is_absolute() or ".." in p.parts or not p.parts:
+                errors.append(
+                    "phases.documentation.output_dir must be a relative path "
+                    "with at least one segment and no '..' segments "
+                    "(resolved under <run_dir>/; values like '.' or "
+                    "'./' that normalize to the run dir itself are "
+                    "rejected)"
+                )
+
+
 def _validate_output(config: Dict[str, Any], errors: List[str]) -> None:
     output = config.get("output")
     if output is None:
@@ -500,6 +565,7 @@ def validate_config(config: Dict[str, Any]) -> None:
     _validate_pre_run(config, errors)
     _validate_phases(config, errors)
     _validate_linting(config, errors)
+    _validate_documentation(config, errors)
     _validate_output(config, errors)
 
     if errors:
