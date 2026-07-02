@@ -63,7 +63,7 @@ Sentinel is one layer in a stack:
 |  aurig-core (project manifest engine)                    |
 |  - Owns the canonical project YAML inside each repo      |
 |  - Translates manifest into vendor TCL scripts           |
-|  - Backs the linting phase; documentation up next        |
+|  - Backs the linting and documentation phases            |
 +----------------------------------------------------------+
                           |
                           v
@@ -170,7 +170,8 @@ The AURIG stack ships, **as a single offer**:
 - HDL **linting** as a Sentinel phase backed by aurig-lint (active —
   aurig-lint's project lint runner driven as a subprocess).
 - HDL **documentation** generation as a Sentinel phase backed by
-  aurig-doc (planned — no backend integrated yet).
+  aurig-doc (active — aurig-doc's project document runner driven as a
+  subprocess).
 - Vendor-agnostic **synthesis script generation** through the manifest,
   not duplicated per project.
 - **Regression**, **synthesis**, and **artifact bundling** in one
@@ -191,9 +192,7 @@ assembly**:
 For a lab that wants the FPGA-aware nightly **without writing the
 integration themselves**, that is the proposition: Sentinel is the
 orchestrator, aurig-core is the HDL brain, and they are designed to
-compose. The `linting` backend ships today; the `documentation`
-backend lands through the items tracked under
-[Roadmap → In progress](#planned).
+compose. Both the `linting` and `documentation` backends ship today.
 
 ## Quick Start
 
@@ -246,9 +245,9 @@ phases:
 - **aurig-lint** — required by the `linting` phase (the project lint
   runner), which requires **aurig-core** on the Tcl package path. See
   [aurig-lint](https://github.com/aurig-fpga/aurig-lint).
-- The `documentation` phase backend will be **aurig-doc** (planned —
-  not yet integrated). See
-  [aurig-doc](https://github.com/aurig-fpga/aurig-doc).
+- **aurig-doc** — required by the `documentation` phase (the project
+  document runner), which requires **aurig-core** on the Tcl package
+  path. See [aurig-doc](https://github.com/aurig-fpga/aurig-doc).
 - **EDA tools as needed**, available on `PATH` for the user that runs
   Sentinel:
   - **Synthesis:** Xilinx Vivado (Quartus is a stub).
@@ -330,15 +329,14 @@ without deleting its config, move it under `configs/disabled/`.
 | `fetch`         | Git clone or local copy into the run dir     | Active                                            |
 | `pre_run`       | User-supplied scripts and a main program     | Active                                            |
 | `linting`       | VHDL style/quality checks via aurig-lint     | Active (`aurig-lint` project lint runner)         |
-| `documentation` | HDL documentation generation                 | Planned (aurig-doc integration)                   |
+| `documentation` | HDL documentation generation                 | Active (`aurig-doc` project document runner)      |
 | `regression`    | Simulation-based regression                  | Active (`vunit` + `convention` backends)          |
 | `synthesis`     | FPGA synthesis via repo-provided TCL         | Active (Vivado; Quartus stub)                     |
 | `deployment`    | Bitstream programming                        | Roadmap (schema accepts it, no backend)           |
 
-Phases not listed under `phases:` default to disabled. `documentation`
+Phases not listed under `phases:` default to disabled. `deployment`
 logs a `PENDING` status with a TODO marker when enabled and does not
-fail the pipeline. `deployment` behaves the same way until its backend
-lands.
+fail the pipeline until its backend lands.
 
 ## Usage
 
@@ -629,8 +627,41 @@ phases:
 
 #### `phases.documentation`
 
-Pending. Reports `PENDING` when enabled. No backend-specific fields are
-read yet.
+Drives [aurig-doc](https://github.com/aurig-fpga/aurig-doc)'s project
+document runner (`tools/run_doc_project_inprocess.tcl`) as a
+subprocess. Sentinel passes the top-level `project_manifest` through as
+`-manifest`, captures stdout+stderr into
+`<run_dir>/logs/documentation.log`, and maps the runner's exit codes
+onto phase statuses (`0` → `completed`, `2` → `error`). There is no
+exit `1`: documentation has no quality-threshold notion like lint's
+`fail_on`, so the phase never reports `failed` — only "docs generated"
+or "the tool/setup broke". `global_settings.continue_on_error` is
+honored on `error` like in the other phases.
+
+| Field            | Type            | Default        | Notes                                                                              |
+|------------------|-----------------|----------------|------------------------------------------------------------------------------------|
+| `enabled`        | bool            | `false`        |                                                                                    |
+| `aurig_doc_path` | string          | unset          | Required at runtime. Falls back to env `SENTINEL_AURIG_DOC_PATH` when absent.      |
+| `tclsh_path`     | string          | `tclsh`        | Resolved on `PATH` at runtime.                                                     |
+| `format`         | enum            | `html`         | `html \| md`. Passed through as `-format`.                                         |
+| `output_dir`     | string          | `doc_output`   | Created under the run dir. Bundled into `artifacts/` by `bundle_zip`.              |
+| `verbosity`      | int             | unset          | Passed through as `-verbosity` when present.                                       |
+
+`aurig_doc_path` must point at the root of an aurig-doc checkout; the
+runner script is resolved as
+`<aurig_doc_path>/tools/run_doc_project_inprocess.tcl`. Like
+aurig-lint, aurig-doc requires aurig-core on the Tcl package path —
+see the aurig-doc repository for its toolchain requirements.
+
+```yaml
+phases:
+  documentation:
+    enabled: true
+    aurig_doc_path: /opt/aurig-doc
+    format: html
+    output_dir: doc_output
+    # verbosity: 1
+```
 
 #### `phases.regression`
 
@@ -746,6 +777,8 @@ Sentinel/
 |   +-- config_validator.py      # YAML schema, loading, discovery
 |   +-- fetch_code.py            # git/local fetch
 |   +-- project_setup.py         # pre_run hook execution
+|   +-- linting.py               # aurig-lint project lint runner (subprocess)
+|   +-- documentation.py         # aurig-doc project document runner (subprocess)
 |   +-- regression_testing.py    # vunit + convention backends
 |   +-- synthesis.py             # Vivado custom-script backend
 +-- deployment/                  # systemd / Task Scheduler scaffolding
@@ -763,6 +796,8 @@ Sentinel/
 - `pre_run` hooks (scripts + main program) with cross-platform script
   dispatch.
 - `linting` phase via `aurig-lint`'s project lint runner (subprocess).
+- `documentation` phase via `aurig-doc`'s project document runner
+  (subprocess).
 - `regression` phase with VUnit and convention backends across GHDL,
   ModelSim/Questa, Active-HDL, and Vivado xsim.
 - `synthesis` phase against repository-provided TCL scripts on Vivado.
@@ -770,7 +805,6 @@ Sentinel/
 
 ### Planned
 
-- `documentation` backend via `aurig-doc` subprocess invocation.
 - Multi-vendor synthesis (Quartus first, then Diamond).
 - `deployment` phase: bitstream programming and post-program verify.
 - Post-deployment testing phase (board-in-the-loop sanity checks).
