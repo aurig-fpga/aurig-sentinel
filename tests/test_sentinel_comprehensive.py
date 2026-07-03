@@ -2062,6 +2062,24 @@ class TestDocumentationSchemaValidation(unittest.TestCase):
             any("output_dir" in e and ".." in e for e in errors), errors
         )
 
+    def test_accepts_absent_verbosity(self):
+        self.assertIsNone(self._validate({"enabled": True}))
+
+    def test_accepts_verbosity_zero(self):
+        self.assertIsNone(self._validate({"enabled": True, "verbosity": 0}))
+
+    def test_accepts_verbosity_two(self):
+        self.assertIsNone(self._validate({"enabled": True, "verbosity": 2}))
+
+    def test_rejects_non_int_verbosity(self):
+        # bool last: isinstance(True, int) is True in Python, so True
+        # would slip through a plain isinstance(v, int) check and reach
+        # the tclsh command line as "-verbosity True".
+        for bad in ("high", [1], {"level": 1}, 1.5, True):
+            with self.subTest(verbosity=bad):
+                errors = self._validate({"enabled": True, "verbosity": bad}) or []
+                self.assertTrue(any("verbosity" in e for e in errors), errors)
+
 
 # ---------------------------------------------------------------------------
 # Regression / VUnit backend (sys.executable, _vunit_is_importable contract)

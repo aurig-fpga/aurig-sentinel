@@ -528,6 +528,20 @@ def _validate_documentation(config: Dict[str, Any], errors: List[str]) -> None:
                     "rejected)"
                 )
 
+    # Reject bool explicitly: isinstance(True, int) is True in Python,
+    # and run_documentation stringifies the value onto the tclsh
+    # command line, so YAML ``verbosity: true`` would otherwise reach
+    # aurig-doc as ``-verbosity True``. No positivity check on purpose:
+    # unlike retention_days/depth/timeout_seconds (counts/durations
+    # where 0 is meaningless), verbosity is a level where 0 is valid.
+    verbosity = doc.get("verbosity")
+    if verbosity is not None and (
+        isinstance(verbosity, bool) or not isinstance(verbosity, int)
+    ):
+        errors.append(
+            "phases.documentation.verbosity must be an integer when present"
+        )
+
 
 def _validate_output(config: Dict[str, Any], errors: List[str]) -> None:
     output = config.get("output")
