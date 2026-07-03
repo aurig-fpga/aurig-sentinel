@@ -63,9 +63,8 @@ pre_run:
   # timeout_seconds: 1800        # default; raise for long env scripts
 
 # Phase pipeline. At least one phase must be enabled.
-# `linting`, `regression`, and `synthesis` have backends; `documentation`
-# is accepted but emits a TODO(aurig-doc) placeholder until that backend
-# stabilises. `deployment` is roadmap.
+# `linting`, `documentation`, `regression`, and `synthesis` have
+# backends; `deployment` is roadmap.
 phases:
   linting:
     enabled: false
@@ -81,6 +80,13 @@ phases:
     # exclude: '.*generated.*'                      # optional regex filter
   documentation:
     enabled: false
+    # aurig_doc_path is the path to an aurig-doc checkout (repository root).
+    # If absent, Sentinel falls back to env SENTINEL_AURIG_DOC_PATH.
+    # aurig_doc_path: /opt/aurig-doc
+    # tclsh_path: tclsh                            # default; override if not on PATH
+    # format:  html                                 # html | md
+    # output_dir: doc_output                        # under <run_dir>/
+    # verbosity: 1                                  # optional, passed through as -verbosity
   regression:
     enabled: false
     # backend:        convention            # vunit | convention
