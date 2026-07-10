@@ -16,10 +16,10 @@ fi
 # Patterns to block
 PATTERNS=(
     '[Cc]o-[Aa]uthored-[Bb]y:.*([Cc]laude|[Cc]odex|[Cc]opilot|[Aa]nthropic|[Oo]penai|[Cc]hatgpt)'
-    'Generated.with.*[Cc]laude.[Cc]ode'
+    '[Gg]enerated.with.*([Cc]laude|[Cc]odex|[Cc]opilot|[Aa]nthropic|[Oo]penai|[Cc]hatgpt)'
     'noreply@anthropic\.com'
     '🤖.*Generated'
-    '[Aa]ssisted-[Bb]y:.*([Cc]laude|[Cc]opilot|[Cc]odex|[Cc]hatgpt)'
+    '[Aa]ssisted-[Bb]y:.*([Cc]laude|[Cc]odex|[Cc]opilot|[Aa]nthropic|[Oo]penai|[Cc]hatgpt)'
 )
 
 for pattern in "${PATTERNS[@]}"; do
