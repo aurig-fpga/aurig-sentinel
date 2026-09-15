@@ -761,6 +761,19 @@ output:
   bundle_zip: true
 ```
 
+## Running the regression phase with GHDL
+
+### Prerequisites
+
+Install GHDL and GTKWave on Ubuntu/WSL:
+
+```bash
+sudo apt update
+sudo apt install ghdl gtkwave
+ghdl --version
+gtkwave --version
+```
+
 ## Project Structure
 
 ```
