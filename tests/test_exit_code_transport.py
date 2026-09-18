@@ -123,7 +123,7 @@ def test_successful_dry_run_exits_0(workspace):
 
     result = _run_sentinel("--config", str(cfg), "--dry-run", cwd=tmp_path)
 
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     assert "0 failed (execution)" in result.stdout
 
 
@@ -156,7 +156,7 @@ def test_execution_failure_exits_1(workspace):
 
     result = _run_sentinel("--config", str(cfg), cwd=tmp_path)
 
-    assert result.returncode == 1, result.stderr
+    assert result.returncode == 1, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     # Proof the run reached execution rather than being skipped or blocked.
     assert "0 skipped (validation)" in result.stdout
     assert "0 blocked (night-window)" in result.stdout
@@ -173,7 +173,7 @@ def test_nonexistent_config_file_exits_2(workspace):
 
     result = _run_sentinel("--config", str(ghost), cwd=tmp_path)
 
-    assert result.returncode == 2, result.stdout
+    assert result.returncode == 2, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     assert "config file not found" in result.stderr
 
 
@@ -187,7 +187,7 @@ def test_empty_config_dir_exits_2(workspace):
 
     result = _run_sentinel("--config-dir", str(empty), cwd=tmp_path)
 
-    assert result.returncode == 2, result.stdout
+    assert result.returncode == 2, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     assert "no active config files found" in result.stderr
 
 
@@ -197,7 +197,7 @@ def test_nonexistent_config_dir_exits_2(workspace):
 
     result = _run_sentinel("--config-dir", str(ghost_dir), cwd=tmp_path)
 
-    assert result.returncode == 2, result.stdout
+    assert result.returncode == 2, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     assert "config directory not found" in result.stderr
 
 
@@ -212,7 +212,7 @@ def test_duplicate_project_name_exits_2(workspace):
 
     result = _run_sentinel("--config-dir", str(cfg_dir), "--dry-run", cwd=tmp_path)
 
-    assert result.returncode == 2, result.stdout
+    assert result.returncode == 2, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     assert "project.name must be unique" in result.stderr
     # The collision must short-circuit before the per-config loop.
     assert "config(s) processed" not in result.stdout
@@ -234,5 +234,5 @@ def test_conflicting_config_flags_exit_2(workspace):
         "--config", str(cfg), "--config-dir", str(cfg_dir), cwd=tmp_path
     )
 
-    assert result.returncode == 2, result.stdout
+    assert result.returncode == 2, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     assert "mutually exclusive" in result.stderr
