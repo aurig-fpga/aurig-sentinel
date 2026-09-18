@@ -258,6 +258,34 @@ phases:
   only resolves the relative path; the manifest format is documented
   in the aurig-core repository.
 
+#### GHDL (regression phase)
+
+Required on `PATH` for any config that sets `simulator: ghdl` (the
+EDA tools bullet above). On Ubuntu or WSL:
+
+```bash
+sudo apt install ghdl
+```
+
+Confirm what you got. The Ubuntu `ghdl` package depends on
+`ghdl-mcode | ghdl-gcc | ghdl-llvm`, so which code generator you end up
+with depends on the alternative apt resolves:
+
+```bash
+ghdl --version
+```
+
+The regression phase has been verified against **GHDL 5.0.1** (Ubuntu
+package `5.0.1+dfsg-1ubuntu1`) with the **mcode** backend. That is the
+version it was verified against, not a floor: neither Sentinel's code
+nor the rest of this README expresses a minimum GHDL version. Other
+versions and backends are untested rather than unsupported.
+
+Backend selection, the `tb_*_sim.tcl` convention, and where results are
+written are covered under [`phases.regression`](#phasesregression). The
+VUnit backend needs the `vunit-hdl` package in addition to GHDL — see
+[Install Sentinel](#install-sentinel).
+
 ### Install Sentinel
 
 ```bash
