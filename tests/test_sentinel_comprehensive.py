@@ -2898,5 +2898,182 @@ class TestUtilityFunctions(unittest.TestCase):
                 shutil.rmtree(test_dir, ignore_errors=True)
 
 
+# ---------------------------------------------------------------------------
+# Phase result detail preserved through aggregation
+# ---------------------------------------------------------------------------
+
+class TestPhaseResultDetailPreserved(unittest.TestCase):
+    """``execute_phases`` used to copy only ``status`` out of the
+    regression and synthesis results, discarding detail those phases had
+    already computed: the convention backend's total/passed/failed/
+    skipped counters and synthesis's ``missing_reports``. A run that
+    executed zero testbenches recorded the same thing as one that
+    executed fifty.
+
+    These pin the detail to the aggregated result so it cannot be
+    dropped again silently. Nothing here asserts a new failure
+    condition — the detail is recorded, not acted on — and each test
+    also checks the run outcome is unchanged, so a later gate cannot be
+    mistaken for a side effect of preserving the data.
+    """
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def _config(self, phase):
+        """Minimal config that reaches exactly one phase.
+
+        Fetch is disabled so the phase function (patched in each test)
+        is the only thing that runs, and bundling is off so the run
+        leaves nothing behind but the temp dir.
+        """
+        return {
+            "project": {"name": "detail-demo"},
+            "project_manifest": "manifest.yaml",
+            "fetch": {"enabled": False},
+            "output": {
+                "base_dir": str(self.test_dir / "runs"),
+                "bundle_zip": False,
+            },
+            "phases": {phase: {"enabled": True}},
+        }
+
+    # ---- regression ----
+
+    def test_regression_counters_reach_aggregated_result(self):
+        from sentinel.main import execute_phases
+
+        phase_result = {
+            "status": "completed",
+            "backend": "convention",
+            "simulator": "ghdl",
+            "total": 3,
+            "passed": 2,
+            "failed": 0,
+            "skipped": 1,
+            "summary_file": str(self.test_dir / "regression_summary.txt"),
+        }
+        with patch("sentinel.main.regression_testing_phase",
+                   return_value=phase_result):
+            result = execute_phases(self._config("regression"), "<test>")
+
+        entry = result["results"]["regression"]
+        self.assertEqual(entry["status"], "completed")
+        self.assertEqual(entry["total"], 3)
+        self.assertEqual(entry["passed"], 2)
+        self.assertEqual(entry["failed"], 0)
+        self.assertEqual(entry["skipped"], 1)
+        self.assertEqual(entry["backend"], "convention")
+        self.assertEqual(entry["simulator"], "ghdl")
+        # Recording detail must not invent a failure.
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["failed_phases"], [])
+
+    def test_regression_zero_counters_are_recorded_not_dropped(self):
+        """The counters are copied with an ``is not None`` test, not a
+        truthiness test. A truthiness test would drop precisely the
+        zero-work numbers that make a no-op run recognisable, which is
+        the whole point of carrying them.
+        """
+        from sentinel.main import execute_phases
+
+        phase_result = {
+            "status": "completed",
+            "backend": "convention",
+            "simulator": "ghdl",
+            "total": 0,
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0,
+        }
+        with patch("sentinel.main.regression_testing_phase",
+                   return_value=phase_result):
+            result = execute_phases(self._config("regression"), "<test>")
+
+        entry = result["results"]["regression"]
+        for key in ("total", "passed", "failed", "skipped"):
+            with self.subTest(key=key):
+                self.assertIn(key, entry)
+                self.assertEqual(entry[key], 0)
+        # Still a success today: this PR records the zero, it does not
+        # act on it.
+        self.assertEqual(result["status"], "ok")
+
+    def test_regression_without_counters_omits_them(self):
+        """The vunit backend reports no counters. The selective copy
+        must leave those keys absent rather than inventing zeros, so
+        "backend reported nothing" stays distinguishable from "backend
+        reported zero".
+        """
+        from sentinel.main import execute_phases
+
+        phase_result = {
+            "status": "completed",
+            "backend": "vunit",
+            "log_file": str(self.test_dir / "vunit_output.log"),
+        }
+        with patch("sentinel.main.regression_testing_phase",
+                   return_value=phase_result):
+            result = execute_phases(self._config("regression"), "<test>")
+
+        entry = result["results"]["regression"]
+        self.assertEqual(entry["backend"], "vunit")
+        self.assertTrue(entry["log_file"].endswith("vunit_output.log"))
+        for key in ("total", "passed", "failed", "skipped"):
+            with self.subTest(key=key):
+                self.assertNotIn(key, entry)
+
+    # ---- synthesis ----
+
+    def test_synthesis_missing_reports_reach_aggregated_result(self):
+        from sentinel.main import execute_phases
+
+        phase_result = {
+            "status": "completed",
+            "tool": "vivado",
+            "script": "scripts/run_synthesis.tcl",
+            "missing_reports": ["timing_summary.rpt", "drc.rpt"],
+            "log_file": str(self.test_dir / "synthesis.log"),
+        }
+        with patch("sentinel.synthesis.run_synthesis",
+                   return_value=phase_result):
+            result = execute_phases(self._config("synthesis"), "<test>")
+
+        entry = result["results"]["synthesis"]
+        self.assertEqual(entry["status"], "completed")
+        self.assertEqual(
+            entry["missing_reports"], ["timing_summary.rpt", "drc.rpt"]
+        )
+        self.assertEqual(entry["tool"], "vivado")
+        self.assertEqual(entry["script"], "scripts/run_synthesis.tcl")
+        # Missing reports are recorded, not escalated: synthesis
+        # returned "completed" and the run stays ok.
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["failed_phases"], [])
+
+    def test_synthesis_empty_missing_reports_is_recorded(self):
+        """An empty list means "checked, none missing", which is not
+        the same as the key being absent (no expected_reports checked
+        at all). The empty list must survive the copy.
+        """
+        from sentinel.main import execute_phases
+
+        phase_result = {
+            "status": "completed",
+            "tool": "vivado",
+            "missing_reports": [],
+        }
+        with patch("sentinel.synthesis.run_synthesis",
+                   return_value=phase_result):
+            result = execute_phases(self._config("synthesis"), "<test>")
+
+        entry = result["results"]["synthesis"]
+        self.assertIn("missing_reports", entry)
+        self.assertEqual(entry["missing_reports"], [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
