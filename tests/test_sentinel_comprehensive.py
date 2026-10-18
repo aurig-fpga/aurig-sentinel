@@ -2968,6 +2968,10 @@ class TestPhaseResultDetailPreserved(unittest.TestCase):
         self.assertEqual(entry["skipped"], 1)
         self.assertEqual(entry["backend"], "convention")
         self.assertEqual(entry["simulator"], "ghdl")
+        # The summary file is the only on-disk artefact the regression
+        # phase produces; losing its path in the copy would leave the
+        # counters with nothing to point at.
+        self.assertEqual(entry["summary_file"], phase_result["summary_file"])
         # Recording detail must not invent a failure.
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["failed_phases"], [])
@@ -3073,6 +3077,11 @@ class TestPhaseResultDetailPreserved(unittest.TestCase):
         entry = result["results"]["synthesis"]
         self.assertIn("missing_reports", entry)
         self.assertEqual(entry["missing_reports"], [])
+        # Stated in every test in this class: recording detail escalates
+        # nothing. A later gate then shows up as a deliberate change
+        # here rather than as a side effect nobody pinned.
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["failed_phases"], [])
 
 
 if __name__ == "__main__":
