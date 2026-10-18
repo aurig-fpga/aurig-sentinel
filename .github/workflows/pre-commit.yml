@@ -16,3 +16,29 @@ jobs:
         with:
           python-version: "3.13"
       - uses: pre-commit/action@v3.0.1
+
+  # Enforce the no-AI-attribution policy over the PR's commit range. The
+  # local commit-msg hook is bypassable best-effort; this check is the
+  # real barrier.
+  no-ai-attribution:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Check PR commit messages for AI attribution
+        # Copied verbatim from the no-ai-attribution job of aurig-core,
+        # aurig-lint and aurig-doc. The pattern is not the same as the one in
+        # the local no-ai-coauthor hook (scripts/check-no-ai-coauthor.sh).
+        run: |
+          git log "origin/${{ github.base_ref }}..HEAD" --format=%B > /tmp/pr-commit-msgs.txt
+          grep -P '(?i)(co-authored-by:.*(claude|copilot|codex|anthropic|openai|chatgpt)|assisted-by:.*(claude|copilot|codex|anthropic|openai|chatgpt)|generated.with.*(claude|copilot|codex|anthropic|openai|chatgpt)|noreply@anthropic\.com|🤖.*generated)' /tmp/pr-commit-msgs.txt && status=0 || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "ERROR: AI attribution detected in PR commit messages (matches above)."
+            exit 1
+          elif [ "$status" -ne 1 ]; then
+            echo "ERROR: grep failed (exit $status) -- check did not run."
+            exit "$status"
+          fi
+          echo "OK: no AI attribution in commit range."
