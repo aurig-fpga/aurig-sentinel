@@ -2912,9 +2912,16 @@ class TestPhaseResultDetailPreserved(unittest.TestCase):
 
     These pin the detail to the aggregated result so it cannot be
     dropped again silently. Nothing here asserts a new failure
-    condition — the detail is recorded, not acted on — and each test
-    also checks the run outcome is unchanged, so a later gate cannot be
-    mistaken for a side effect of preserving the data.
+    condition — the detail is recorded, not acted on.
+
+    Four of the five tests also check the run outcome is unchanged: the
+    regression counters test and both synthesis tests assert
+    ``status == "ok"`` and ``failed_phases == []``, the zero-counters
+    test asserts ``status`` only, and the vunit no-counters test asserts
+    neither. These outcome checks pin that recording detail does not
+    change the run outcome, so a later gate has to change them
+    deliberately. They do not detect a dropped copy: the outcome is
+    ``ok`` with or without the detail.
     """
 
     def setUp(self):
