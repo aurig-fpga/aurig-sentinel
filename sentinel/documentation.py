@@ -19,11 +19,13 @@ and single-binary packaging are tracked as future work.
 Exit code contract (from aurig-doc's document runner)
 -----------------------------------------------------
 Documentation has no quality-threshold notion like lint's ``fail_on``;
-there is no "documentation failed" state, only "docs generated" or
-"the tool/setup broke". The contract is therefore simpler than lint's
-0/1/2 — there is **no exit 1**:
+there is no "documentation failed" state, only "the runner exited
+cleanly" or "the tool/setup broke". The contract is therefore simpler
+than lint's 0/1/2 — there is **no exit 1**:
 
-- ``0`` — docs generated; Sentinel maps to ``completed``.
+- ``0`` — the runner exited cleanly; Sentinel maps to ``completed``.
+  Sentinel does not inspect the output directory, so this does not
+  confirm that documentation was produced.
 - ``2`` — any tool/setup error inside aurig-doc / tclsh / the
   subprocess. Sentinel maps to ``error`` so callers can tell a broken
   setup from a successful run.
