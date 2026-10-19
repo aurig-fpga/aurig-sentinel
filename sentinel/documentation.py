@@ -24,8 +24,8 @@ cleanly" or "the tool/setup broke". The contract is therefore simpler
 than lint's 0/1/2 — there is **no exit 1**:
 
 - ``0`` — the runner exited cleanly; Sentinel maps to ``completed``.
-  Sentinel does not inspect the output directory, so this does not
-  confirm that documentation was produced.
+  Sentinel does not check whether documentation was produced, so
+  ``completed`` only confirms that the runner exited with code 0.
 - ``2`` — any tool/setup error inside aurig-doc / tclsh / the
   subprocess. Sentinel maps to ``error`` so callers can tell a broken
   setup from a successful run.

@@ -663,9 +663,9 @@ subprocess. Sentinel passes the top-level `project_manifest` through as
 onto phase statuses (`0` → `completed`, `2` → `error`). There is no
 exit `1`: documentation has no quality-threshold notion like lint's
 `fail_on`, so the phase never reports `failed` — only "the runner
-exited cleanly" or "the tool/setup broke". Sentinel does not inspect
-the output directory, so `completed` does not confirm that
-documentation was produced. `global_settings.continue_on_error` is
+exited cleanly" or "the tool/setup broke". Sentinel does not check
+whether documentation was produced, so `completed` only confirms that
+the runner exited with code 0. `global_settings.continue_on_error` is
 honored on `error` like in the other phases.
 
 | Field            | Type            | Default        | Notes                                                                              |
