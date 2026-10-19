@@ -2906,9 +2906,7 @@ class TestPhaseResultDetailPreserved(unittest.TestCase):
     """``execute_phases`` used to copy only ``status`` out of the
     regression and synthesis results, discarding detail those phases had
     already computed: the convention backend's total/passed/failed/
-    skipped counters and synthesis's ``missing_reports``. A run that
-    executed zero testbenches recorded the same thing as one that
-    executed fifty.
+    skipped counters and synthesis's ``missing_reports``.
 
     These pin the detail to the aggregated result so it cannot be
     dropped again silently. Nothing here asserts a new failure
@@ -2984,9 +2982,9 @@ class TestPhaseResultDetailPreserved(unittest.TestCase):
 
     def test_regression_zero_counters_are_recorded_not_dropped(self):
         """The counters are copied with an ``is not None`` test, not a
-        truthiness test. A truthiness test would drop precisely the
-        zero-work numbers that make a no-op run recognisable, which is
-        the whole point of carrying them.
+        truthiness test. When the backend returns counters of ``0``, a
+        truthiness test would drop them; this pins that zero counters
+        returned by the backend reach the aggregated result.
         """
         from sentinel.main import execute_phases
 
@@ -3065,9 +3063,11 @@ class TestPhaseResultDetailPreserved(unittest.TestCase):
         self.assertEqual(result["failed_phases"], [])
 
     def test_synthesis_empty_missing_reports_is_recorded(self):
-        """An empty list means "checked, none missing", which is not
-        the same as the key being absent (no expected_reports checked
-        at all). The empty list must survive the copy.
+        """On success, synthesis always returns ``missing_reports``. An
+        empty list means only that no configured expected report is
+        missing; it is also empty when no expected_reports are
+        configured, so it does not prove any report was checked. The
+        empty list must survive the copy.
         """
         from sentinel.main import execute_phases
 
