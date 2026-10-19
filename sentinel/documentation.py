@@ -328,7 +328,7 @@ def run_documentation(config: Dict[str, Any], ctx: RunContext) -> Optional[Dict[
     stderr_tail = result.stderr[-500:] if result.stderr else ""
 
     if rc == 0:
-        logger.info("aurig-doc document completed (docs generated)")
+        logger.info("aurig-doc document runner exited cleanly (exit 0)")
         return {
             "status": "completed",
             "exit_code": 0,
