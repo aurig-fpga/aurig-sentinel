@@ -349,9 +349,33 @@ def execute_phases(config: Dict[str, Any], config_path: str) -> Dict[str, Any]:
             try:
                 regression_result = regression_testing_phase(config, ctx)
                 if regression_result:
-                    phase_results["regression"] = {
-                        "status": regression_result.get("status", "OK")
+                    # The convention backend already counts what it ran
+                    # (total / passed / failed / skipped, plus the
+                    # backend and simulator it used); copying only
+                    # ``status`` threw all of that away. Carry through
+                    # the counters and diagnostic fields the backend
+                    # returns, including zero values, mirroring the
+                    # linting / documentation blocks above. Status is
+                    # always included; the rest only when the backend
+                    # returned them — the vunit backend reports no
+                    # counters, and the convention backend returns
+                    # status "skipped" without counters when it finds
+                    # no testbenches.
+                    #
+                    # The ``is not None`` test matters: a counter of
+                    # ``0`` is a real value, and a truthiness test
+                    # would drop it.
+                    entry: Dict[str, Any] = {
+                        "status": regression_result.get("status", "OK"),
                     }
+                    for key in ("backend", "simulator", "total", "passed",
+                                "failed", "skipped", "error", "message",
+                                "log_file", "full_log_file", "output_dir",
+                                "summary_file", "exit_code"):
+                        value = regression_result.get(key)
+                        if value is not None:
+                            entry[key] = value
+                    phase_results["regression"] = entry
                     if regression_result.get("output_dir"):
                         artifact_paths.append(regression_result["output_dir"])
                     _abort_if_failed(
@@ -376,9 +400,27 @@ def execute_phases(config: Dict[str, Any], config_path: str) -> Dict[str, Any]:
                 from .synthesis import run_synthesis  # lazy
                 synthesis_result = run_synthesis(config, ctx)
                 if synthesis_result:
-                    phase_results["synthesis"] = {
-                        "status": synthesis_result.get("status", "OK")
+                    # Synthesis checks the configured expected_reports
+                    # and returns ``missing_reports``, but copying only
+                    # ``status`` discarded it — so a synthesis run that
+                    # produced none of its expected reports recorded the
+                    # same result as one that produced all of them.
+                    # Same selective-copy shape as the blocks above; an
+                    # empty ``missing_reports`` list is still recorded.
+                    # It means only that no configured expected report
+                    # is missing — which includes the case where no
+                    # expected_reports are configured at all, so it
+                    # does not prove any report was checked.
+                    entry: Dict[str, Any] = {
+                        "status": synthesis_result.get("status", "OK"),
                     }
+                    for key in ("tool", "script", "missing_reports", "error",
+                                "message", "log_file", "full_log_file",
+                                "output_dir", "exit_code"):
+                        value = synthesis_result.get(key)
+                        if value is not None:
+                            entry[key] = value
+                    phase_results["synthesis"] = entry
                     if synthesis_result.get("output_dir"):
                         artifact_paths.append(synthesis_result["output_dir"])
                     _abort_if_failed(
