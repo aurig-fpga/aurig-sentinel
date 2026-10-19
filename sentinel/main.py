@@ -352,19 +352,19 @@ def execute_phases(config: Dict[str, Any], config_path: str) -> Dict[str, Any]:
                     # The convention backend already counts what it ran
                     # (total / passed / failed / skipped, plus the
                     # backend and simulator it used); copying only
-                    # ``status`` threw all of that away, so a run that
-                    # executed zero testbenches left behind the same
-                    # recorded result as one that executed fifty.
-                    # Carry the counters and the diagnostic context
-                    # through, mirroring the linting / documentation
-                    # blocks above. Status is always included; the rest
-                    # only when the backend returned them — the vunit
-                    # backend reports no counters.
+                    # ``status`` threw all of that away. Carry through
+                    # the counters and diagnostic fields the backend
+                    # returns, including zero values, mirroring the
+                    # linting / documentation blocks above. Status is
+                    # always included; the rest only when the backend
+                    # returned them — the vunit backend reports no
+                    # counters, and the convention backend returns
+                    # status "skipped" without counters when it finds
+                    # no testbenches.
                     #
-                    # The ``is not None`` test matters: these counters
-                    # are legitimately ``0``, and a truthiness test
-                    # would drop exactly the zero-work numbers worth
-                    # recording.
+                    # The ``is not None`` test matters: a counter of
+                    # ``0`` is a real value, and a truthiness test
+                    # would drop it.
                     entry: Dict[str, Any] = {
                         "status": regression_result.get("status", "OK"),
                     }
@@ -406,9 +406,11 @@ def execute_phases(config: Dict[str, Any], config_path: str) -> Dict[str, Any]:
                     # produced none of its expected reports recorded the
                     # same result as one that produced all of them.
                     # Same selective-copy shape as the blocks above; an
-                    # empty ``missing_reports`` list is still recorded
-                    # (it means "checked, none missing", which is not
-                    # the same as the key being absent).
+                    # empty ``missing_reports`` list is still recorded.
+                    # It means only that no configured expected report
+                    # is missing — which includes the case where no
+                    # expected_reports are configured at all, so it
+                    # does not prove any report was checked.
                     entry: Dict[str, Any] = {
                         "status": synthesis_result.get("status", "OK"),
                     }
